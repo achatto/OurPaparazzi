@@ -15,9 +15,6 @@
 
       <define name="SERVO_HZ" value="40"/>
       <define name="SERVO_HZ_SECONDARY" value="40"/>
-      <define name="AHRS_GRAVITY_UPDATE_COORDINATED_TURN" />
-<!--      <define name="AHRS_USE_GPS_HEADING" />
-<configure name="USE_MAGNETOMETER" value="1" /> -->
       <define name="RADIO_KILL_SWITCH" value="RADIO_FLAPS"/>
       <define name="USE_INS_NAV_INIT"/> 
     </target>
@@ -28,13 +25,14 @@
     <subsystem name="gps"           type="ublox"/>
     <subsystem name="imu"           type="aspirin_v2.0"/>
     <subsystem name="stabilization" type="int_quat"/>
-    <subsystem name="ahrs"          type="int_cmpl_quat"/>
+    <!--    <subsystem name="ahrs"          type="int_cmpl_quat"/>-->
+    <subsystem name="ahrs"          type="float_cmpl_diy"/>
   </firmware>
 
 
   <modules main_freq="60">
     <load name="gps_ubx_ucenter.xml"/>
-    <!--    <load name="sys_mon.xml"/> -->
+    <load name="sys_mon.xml"/>
   </modules>
 
 
@@ -215,6 +213,8 @@
   <section name="INS" prefix="INS_">
     <define name="BARO_SENS" value="15." integer="16"/>
     <define name="SONAR_SENS" value="2.146" integer="16"/>
+    <define name="ROLL_NEUTRAL_DEFAULT" value="0" integer="16"/>
+    <define name="PITCH_NEUTRAL_DEFAULT" value="0" integer="16"/>
   </section>
 
   <section name="GUIDANCE_V" prefix="GUIDANCE_V_">

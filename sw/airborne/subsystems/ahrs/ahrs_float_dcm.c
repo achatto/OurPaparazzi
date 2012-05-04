@@ -161,6 +161,33 @@ void ahrs_update_fw_estimator( void )
 */
 }
 
+void ahrs_export_rotorcraft_fixedpoint( void )
+{
+  ahrs_float.ltp_to_imu_euler.phi = atan2(DCM_Matrix[2][1],DCM_Matrix[2][2]);
+  ahrs_float.ltp_to_imu_euler.theta = -asin(DCM_Matrix[2][0]);
+  ahrs_float.ltp_to_imu_euler.psi = atan2(DCM_Matrix[1][0],DCM_Matrix[0][0]);
+  ahrs_float.ltp_to_imu_euler.psi += M_PI; // Rotating the angle 180deg to fit for PPRZ
+
+  ahrs.ltp_to_imu_euler.phi = ANGLE_BFP_OF_REAL(ahrs_float.ltp_to_imu_euler.phi);
+  ahrs.ltp_to_imu_euler.theta = ANGLE_BFP_OF_REAL(ahrs_float.ltp_to_imu_euler.theta);
+  ahrs.ltp_to_imu_euler.psi = ANGLE_BFP_OF_REAL(ahrs_float.ltp_to_imu_euler.psi);
+
+  /* Compute LTP to IMU quaternion */
+  INT32_QUAT_OF_EULERS(ahrs.ltp_to_imu_quat, ahrs.ltp_to_imu_euler);
+  /* Compute LTP to IMU rotation matrix */
+  INT32_RMAT_OF_EULERS(ahrs.ltp_to_imu_rmat, ahrs.ltp_to_imu_euler);
+
+  /* Compute LTP to BODY quaternion */
+  INT32_QUAT_COMP_INV(ahrs.ltp_to_body_quat, ahrs.ltp_to_imu_quat, imu.body_to_imu_quat);
+  /* Compute LTP to BODY rotation matrix */
+  INT32_RMAT_COMP_INV(ahrs.ltp_to_body_rmat, ahrs.ltp_to_imu_rmat, imu.body_to_imu_rmat);
+  /* compute LTP to BODY eulers */
+  INT32_EULERS_OF_RMAT(ahrs.ltp_to_body_euler, ahrs.ltp_to_body_rmat);
+  /* compute body rates */
+  INT32_RMAT_TRANSP_RATEMULT(ahrs.body_rate, imu.body_to_imu_rmat, ahrs.imu_rate);
+}
+
+
 
 void ahrs_init(void) {
   ahrs.status = AHRS_UNINIT;
@@ -269,6 +296,10 @@ void ahrs_update_accel(void)
 #endif
 
   Drift_correction();
+
+#ifdef STABILISATION_ATTITUDE_TYPE_INT
+  ahrs_export_rotorcraft_fixedpoint();
+#endif
 }
 
 
