@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 ENAC - Gautier Hattenberger
+ * Copyright (C) 2013 ENAC - Gautier Hattenberger
  *
  * This file is part of paparazzi.
  *
@@ -20,16 +20,41 @@
  */
 
 /**
- * @file subsystems/abi.h
+ * @file subsystems/abi_event_static.c
  *
- * Main include for ABI (AirBorneInterface).
- * @todo explain how to use ABI
+ * ABI main event handler API
+ *
+ * Implementation for static scheduler
+ *
  */
 
-#ifndef ABI_H
-#define ABI_H
+#include "std.h"
+#include "subsystems/abi_event.h"
 
-#include "abi_messages.h"
-#include "abi_event.h"
+abi_event* abi_main_event_queue;
 
-#endif /* ABI_H */
+/** Register a main event callback
+ */
+void abi_register_main_event(abi_event * ev, abi_callback cb) {
+  ev->id = FALSE;
+  ev->cb = cb;
+  ABI_PREPEND(abi_main_event_queue, ev);
+}
+
+/** Raise an event
+ */
+void abi_raise_main_event(abi_event * ev) {
+  ev->id = TRUE;
+}
+
+/** Check and call events
+ */
+void abi_main_event_check(void) {
+  abi_event* e;
+  ABI_FOREACH(abi_main_event_queue, e) {
+    if (e->id) {
+      e->id = FALSE;
+      e->cb();
+    }
+  }
+}

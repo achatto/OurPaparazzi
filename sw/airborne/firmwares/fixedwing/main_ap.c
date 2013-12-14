@@ -668,6 +668,7 @@ void event_task_ap( void ) {
 
   DatalinkEvent();
 
+  //abi_main_event_check();
 
 #if defined MCU_SPI_LINK || defined MCU_UART_LINK
   link_mcu_event_task();
