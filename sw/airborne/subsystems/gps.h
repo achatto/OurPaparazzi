@@ -33,11 +33,6 @@
 
 #include "mcu_periph/sys_time.h"
 
-/* GPS model specific implementation or sim */
-#ifdef GPS_TYPE_H
-#include GPS_TYPE_H
-#endif
-
 #define GPS_FIX_NONE 0x00
 #define GPS_FIX_2D   0x02
 #define GPS_FIX_3D   0x03
@@ -95,13 +90,20 @@ struct GpsTimeSync {
 };
 
 /** global GPS state */
-extern struct GpsState gps;
+extern struct GpsState * _gps;
 
 /** initialize the global GPS state */
 extern void gps_init(void);
 
-/* GPS model specific init implementation */
-extern void gps_impl_init(void);
+/* GPS model specific implementation or sim */
+#ifdef GPS_TYPE_H
+#include GPS_TYPE_H
+#endif
+
+/* GPS model specific init implementation
+ * @return pointer to a GpsState structure
+ */
+extern struct GpsState * gps_impl_init(void);
 
 
 /* mark GPS as lost when no valid 3D fix was received for GPS_TIMEOUT secs */
@@ -112,8 +114,8 @@ extern void gps_impl_init(void);
 inline bool_t GpsIsLost(void);
 
 inline bool_t GpsIsLost(void) {
-  if (sys_time.nb_sec - gps.last_fix_time > GPS_TIMEOUT) {
-    gps.fix = GPS_FIX_NONE;
+  if (sys_time.nb_sec - _gps->last_fix_time > GPS_TIMEOUT) {
+    _gps->fix = GPS_FIX_NONE;
     return TRUE;
   }
   return FALSE;
@@ -127,17 +129,11 @@ inline bool_t GpsIsLost(void) {
 #define gps_Reset(_val) {                               \
 }
 
-
-/*
- * For GPS time synchronizaiton...
- */
-extern struct GpsTimeSync gps_time_sync;
-
 /**
  * Convert time in sys_time ticks to GPS time of week.
  * The resolution is sys_time.resolution
  * @return GPS tow in ms
  */
-extern uint32_t gps_tow_from_sys_ticks(uint32_t sys_ticks);
+extern uint32_t gps_tow_from_sys_ticks(struct GpsTimeSync* gps_time, uint32_t sys_ticks);
 
 #endif /* GPS_H */

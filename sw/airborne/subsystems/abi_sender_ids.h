@@ -76,4 +76,39 @@
 #define BARO_SIM_SENDER_ID 19
 #endif
 
+/*
+ * IDs of gps subsystems and modules
+ */
+#ifndef GPS_UBX_SENDER_ID
+#define GPS_UBX_SENDER_ID 1
+#endif
+
+#ifndef GPS_NMEA_SENDER_ID
+#define GPS_NMEA_SENDER_ID 2
+#endif
+
+#ifndef GPS_SIRF_SENDER_ID
+#define GPS_SIRF_SENDER_ID 3
+#endif
+
+#ifndef GPS_MTK_SENDER_ID
+#define GPS_MTK_SENDER_ID 4
+#endif
+
+#ifndef GPS_SKYTRAQ_SENDER_ID
+#define GPS_SKYTRAQ_SENDER_ID 5
+#endif
+
+#ifndef GPS_SIRF_SENDER_ID
+#define GPS_SIRF_SENDER_ID 6
+#endif
+
+#ifndef GPS_ARDRONE2_SENDER_ID
+#define GPS_ARDRONE2_SENDER_ID 7
+#endif
+
+#ifndef GPS_SIM_SENDER_ID
+#define GPS_SIM_SENDER_ID 8
+#endif
+
 #endif /* ABI_SENDER_IDS_H */

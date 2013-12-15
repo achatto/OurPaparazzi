@@ -5,4 +5,5 @@
 
 ap.CFLAGS += -DUSE_GPS -DUBX -DGPS_USE_LATLONG
 ap.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_ubx.h\"
+ap.CFLAGS += -DGPS_NB_CHANNELS=16
 ap.srcs   +=  $(SRC_SUBSYSTEMS)/gps/gps_ubx.c $(SRC_SUBSYSTEMS)/gps.c

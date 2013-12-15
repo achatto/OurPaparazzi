@@ -30,28 +30,26 @@
 
 #define MSEC_PER_WEEK (1000*60*60*24*7)
 
-struct GpsState gps;
-
-struct GpsTimeSync gps_time_sync;
+struct GpsState * gps;
 
 #if DOWNLINK
 #include "subsystems/datalink/telemetry.h"
 
 static void send_gps(void) {
   static uint8_t i;
-  int16_t climb = -gps.ned_vel.z;
-  int16_t course = (DegOfRad(gps.course)/((int32_t)1e6));
-  DOWNLINK_SEND_GPS(DefaultChannel, DefaultDevice, &gps.fix,
-      &gps.utm_pos.east, &gps.utm_pos.north,
-      &course, &gps.hmsl, &gps.gspeed, &climb,
-      &gps.week, &gps.tow, &gps.utm_pos.zone, &i);
-  if ((gps.fix != GPS_FIX_3D) && (i >= gps.nb_channels)) i = 0;
-  if (i >= gps.nb_channels * 2) i = 0;
-  if (i < gps.nb_channels && ((gps.fix != GPS_FIX_3D) || (gps.svinfos[i].cno > 0))) {
+  int16_t climb = -_gps->ned_vel.z;
+  int16_t course = (DegOfRad(_gps->course)/((int32_t)1e6));
+  DOWNLINK_SEND_GPS(DefaultChannel, DefaultDevice, &_gps->fix,
+      &_gps->utm_pos.east, &_gps->utm_pos.north,
+      &course, &_gps->hmsl, &_gps->gspeed, &climb,
+      &_gps->week, &_gps->tow, &_gps->utm_pos.zone, &i);
+  if ((_gps->fix != GPS_FIX_3D) && (i >= _gps->nb_channels)) i = 0;
+  if (i >= _gps->nb_channels * 2) i = 0;
+  if (i < _gps->nb_channels && ((_gps->fix != GPS_FIX_3D) || (_gps->svinfos[i].cno > 0))) {
     DOWNLINK_SEND_SVINFO(DefaultChannel, DefaultDevice, &i,
-        &gps.svinfos[i].svid, &gps.svinfos[i].flags,
-        &gps.svinfos[i].qi, &gps.svinfos[i].cno,
-        &gps.svinfos[i].elev, &gps.svinfos[i].azim);
+        &_gps->svinfos[i].svid, &_gps->svinfos[i].flags,
+        &_gps->svinfos[i].qi, &_gps->svinfos[i].cno,
+        &_gps->svinfos[i].elev, &_gps->svinfos[i].azim);
   }
   i++;
 }
@@ -60,51 +58,54 @@ static void send_gps_int(void) {
   static uint8_t i;
   static uint8_t last_cnos[GPS_NB_CHANNELS];
   DOWNLINK_SEND_GPS_INT(DefaultChannel, DefaultDevice,
-      &gps.ecef_pos.x, &gps.ecef_pos.y, &gps.ecef_pos.z,
-      &gps.lla_pos.lat, &gps.lla_pos.lon, &gps.lla_pos.alt,
-      &gps.hmsl,
-      &gps.ecef_vel.x, &gps.ecef_vel.y, &gps.ecef_vel.z,
-      &gps.pacc, &gps.sacc,
-      &gps.tow,
-      &gps.pdop,
-      &gps.num_sv,
-      &gps.fix);
-  if (i == gps.nb_channels) i = 0;
-  if (i < gps.nb_channels && gps.svinfos[i].cno > 0 && gps.svinfos[i].cno != last_cnos[i]) {
+      &_gps->ecef_pos.x, &_gps->ecef_pos.y, &_gps->ecef_pos.z,
+      &_gps->lla_pos.lat, &_gps->lla_pos.lon, &_gps->lla_pos.alt,
+      &_gps->hmsl,
+      &_gps->ecef_vel.x, &_gps->ecef_vel.y, &_gps->ecef_vel.z,
+      &_gps->pacc, &_gps->sacc,
+      &_gps->tow,
+      &_gps->pdop,
+      &_gps->num_sv,
+      &_gps->fix);
+  if (i == _gps->nb_channels) i = 0;
+  if (i < _gps->nb_channels && _gps->svinfos[i].cno > 0 && _gps->svinfos[i].cno != last_cnos[i]) {
     DOWNLINK_SEND_SVINFO(DefaultChannel, DefaultDevice, &i,
-        &gps.svinfos[i].svid, &gps.svinfos[i].flags,
-        &gps.svinfos[i].qi, &gps.svinfos[i].cno,
-        &gps.svinfos[i].elev, &gps.svinfos[i].azim);
-    last_cnos[i] = gps.svinfos[i].cno;
+        &_gps->svinfos[i].svid, &_gps->svinfos[i].flags,
+        &_gps->svinfos[i].qi, &_gps->svinfos[i].cno,
+        &_gps->svinfos[i].elev, &_gps->svinfos[i].azim);
+    last_cnos[i] = _gps->svinfos[i].cno;
   }
   i++;
 }
 
 static void send_gps_lla(void) {
   uint8_t err = 0;
-  int16_t climb = -gps.ned_vel.z;
-  int16_t course = (DegOfRad(gps.course)/((int32_t)1e6));
+  int16_t climb = -_gps->ned_vel.z;
+  int16_t course = (DegOfRad(_gps->course)/((int32_t)1e6));
   DOWNLINK_SEND_GPS_LLA(DefaultChannel, DefaultDevice,
-      &gps.lla_pos.lat, &gps.lla_pos.lon, &gps.lla_pos.alt,
-      &course, &gps.gspeed, &climb,
-      &gps.week, &gps.tow,
-      &gps.fix, &err);
+      &_gps->lla_pos.lat, &_gps->lla_pos.lon, &_gps->lla_pos.alt,
+      &course, &_gps->gspeed, &climb,
+      &_gps->week, &_gps->tow,
+      &_gps->fix, &err);
 }
 
 static void send_gps_sol(void) {
-  DOWNLINK_SEND_GPS_SOL(DefaultChannel, DefaultDevice, &gps.pacc, &gps.sacc, &gps.pdop, &gps.num_sv);
+  DOWNLINK_SEND_GPS_SOL(DefaultChannel, DefaultDevice, &_gps->pacc, &_gps->sacc, &_gps->pdop, &_gps->num_sv);
 }
 #endif
 
 void gps_init(void) {
-  gps.fix = GPS_FIX_NONE;
-  gps.cacc = 0;
+  _gps = NULL;
 #ifdef GPS_LED
   LED_OFF(GPS_LED);
 #endif
 #ifdef GPS_TYPE_H
-  gps_impl_init();
+  _gps = gps_impl_init();
 #endif
+  if (_gps == NULL) return; // Return if _gps is not pointing to a gps struct
+  // force to GPS_FIX_NONE
+  _gps->fix = GPS_FIX_NONE;
+  _gps->cacc = 0;
 
 #if DOWNLINK
   register_periodic_telemetry(DefaultPeriodic, "GPS", send_gps);
@@ -114,21 +115,21 @@ void gps_init(void) {
 #endif
 }
 
-uint32_t gps_tow_from_sys_ticks(uint32_t sys_ticks)
+uint32_t gps_tow_from_sys_ticks(struct GpsTimeSync * gps_time, uint32_t sys_ticks)
 {
   uint32_t clock_delta;
   uint32_t time_delta;
   uint32_t itow_now;
 
-  if (sys_ticks < gps_time_sync.t0_ticks) {
-    clock_delta = (0xFFFFFFFF - sys_ticks) + gps_time_sync.t0_ticks + 1;
+  if (sys_ticks < gps_time->t0_ticks) {
+    clock_delta = (0xFFFFFFFF - sys_ticks) + gps_time->t0_ticks + 1;
   } else {
-    clock_delta = sys_ticks - gps_time_sync.t0_ticks;
+    clock_delta = sys_ticks - gps_time->t0_ticks;
   }
 
   time_delta = msec_of_sys_time_ticks(clock_delta);
 
-  itow_now = gps_time_sync.t0_tow + time_delta;
+  itow_now = gps_time->t0_tow + time_delta;
   if (itow_now > MSEC_PER_WEEK) {
     itow_now %= MSEC_PER_WEEK;
   }

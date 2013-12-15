@@ -31,15 +31,17 @@
 #warning "Please use gps_ubx_ucenter.xml module instead of GPS_CONFIGURE"
 #endif
 
+#include "subsystems/gps.h"
 #include "mcu_periph/uart.h"
 
 /** Includes macros generated from ubx.xml */
 #include "ubx_protocol.h"
 
-#define GPS_NB_CHANNELS 16
-
 #define GPS_UBX_MAX_PAYLOAD 255
 struct GpsUbx {
+  struct GpsState gps; // Generic GPS state
+  struct GpsTimeSync gps_time_sync;
+
   bool_t msg_available;
   uint8_t msg_buf[GPS_UBX_MAX_PAYLOAD] __attribute__ ((aligned));
   uint8_t msg_id;
@@ -90,36 +92,6 @@ extern struct GpsUbxRaw gps_ubx_raw;
 #define GpsLink(_x) _GpsLink(GPS_LINK, _x)
 
 #define GpsBuffer() GpsLink(ChAvailable())
-
-#ifndef GPS_UBX_UCENTER
-#define gps_ubx_ucenter_event() {}
-#endif
-
-
-/* Gps callback is called when receiving a VELNED or a SOL message
- * All position/speed messages are sent in one shot and VELNED is the last one on fixedwing
- * For rotorcraft, only SOL message is needed for pos/speed data
- */
-#define GpsEvent(_sol_available_callback) {        \
-    if (GpsBuffer()) {                             \
-      ReadGpsBuffer();                             \
-    }                                              \
-    if (gps_ubx.msg_available) {                   \
-      gps_ubx_read_message();                      \
-      gps_ubx_ucenter_event();                     \
-      if (gps_ubx.msg_class == UBX_NAV_ID &&       \
-          (gps_ubx.msg_id == UBX_NAV_VELNED_ID ||  \
-           (gps_ubx.msg_id == UBX_NAV_SOL_ID &&    \
-            gps_ubx.have_velned == 0))) {          \
-        if (gps.fix == GPS_FIX_3D) {               \
-          gps.last_fix_ticks = sys_time.nb_sec_rem; \
-          gps.last_fix_time = sys_time.nb_sec;      \
-        }                                          \
-        _sol_available_callback();                 \
-      }                                            \
-      gps_ubx.msg_available = FALSE;               \
-    }                                              \
-  }
 
 #define ReadGpsBuffer() {					\
     while (GpsLink(ChAvailable())&&!gps_ubx.msg_available)	\
@@ -177,5 +149,32 @@ extern void ubxsend_cfg_rst(uint16_t, uint8_t);
   }
 
 #define UbxTrailer() { GpsUartSend1(gps_ubx.send_ck_a);  GpsUartSend1(gps_ubx.send_ck_b); GpsUartSendMessage(); }
+
+/* Gps ABI message is send when receiving a VELNED or a SOL message
+ * All position/speed messages are sent in one shot and VELNED is the last one on fixedwing
+ * For rotorcraft, only SOL message is needed for pos/speed data
+ */
+extern void GpsEvent(void);
+//static inline void GpsEvent(void) {
+//  if (GpsBuffer()) {
+//    ReadGpsBuffer();
+//  }
+//  if (gps_ubx.msg_available) {
+//    gps_ubx_read_message();
+//    if (gps_ubx.msg_class == UBX_NAV_ID &&
+//        (gps_ubx.msg_id == UBX_NAV_VELNED_ID ||
+//         (gps_ubx.msg_id == UBX_NAV_SOL_ID &&
+//          gps_ubx.have_velned == 0))) {
+//      if (gps_ubx.gps.fix == GPS_FIX_3D) {
+//        gps_ubx.gps.last_fix_ticks = sys_time.nb_sec_rem;
+//        gps_ubx.gps.last_fix_time = sys_time.nb_sec;
+//      }
+//      // Send GPS message even if not 3D fix ?
+//      // ITOW is valid before position, it can be used by some systems
+//      AbiSendMsgGPS(GPS_UBX_SENDER_ID, &gps_ubx.gps);
+//    }
+//    gps_ubx.msg_available = FALSE;
+//  }
+//}
 
 #endif /* GPS_UBX_H */

@@ -25,6 +25,7 @@ Warning: you still need to tell the driver
   </header>
   <init fun="gps_ubx_ucenter_init()"/>
   <periodic fun="gps_ubx_ucenter_periodic()" start="gps_ubx_ucenter_init()" freq="4." autorun="TRUE"/>
+  <event fun="gps_ucenter_ubx_event()"/>
   <makefile target="ap">
     <file name="gps_ubx_ucenter.c"/>
     <define name="GPS_UBX_UCENTER"/>

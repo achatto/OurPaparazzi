@@ -16,6 +16,11 @@
     <message name="BARO_DIFF" id="2">
       <field name="pressure" type="float" unit="Pa"/>
     </message>
+
+    <message name="GPS" id="3">
+      <field name="gps" type="struct GpsState"/>
+    </message>
+
   </class>
 
 

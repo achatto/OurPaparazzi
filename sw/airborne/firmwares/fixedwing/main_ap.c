@@ -154,10 +154,6 @@ static void send_fliter_status(void) {
 
 #endif // USE_AHRS && USE_IMU
 
-#if USE_GPS
-static inline void on_gps_solution( void );
-#endif
-
 // what version is this ????
 static const uint16_t version = 1;
 
@@ -454,7 +450,7 @@ void reporting_task( void ) {
 
 
 #ifdef FAILSAFE_DELAY_WITHOUT_GPS
-#define GpsTimeoutError (sys_time.nb_sec - gps.last_fix_time > FAILSAFE_DELAY_WITHOUT_GPS)
+#define GpsTimeoutError (sys_time.nb_sec - _gps->last_fix_time > FAILSAFE_DELAY_WITHOUT_GPS)
 #endif
 
 /**
@@ -659,7 +655,7 @@ void event_task_ap( void ) {
 #endif
 
 #if USE_GPS
-  GpsEvent(on_gps_solution);
+  GpsEvent();
 #endif /* USE_GPS */
 
 #if USE_BARO_BOARD
@@ -693,17 +689,17 @@ void event_task_ap( void ) {
 } /* event_task_ap() */
 
 
-#if USE_GPS
-static inline void on_gps_solution( void ) {
-  ins_update_gps();
-#if USE_AHRS
-  ahrs_update_gps();
-#endif
-#ifdef GPS_TRIGGERED_FUNCTION
-  GPS_TRIGGERED_FUNCTION();
-#endif
-}
-#endif
+//#if USE_GPS
+//static inline void on_gps_solution( void ) {
+//  ins_update_gps();
+//#if USE_AHRS
+//  ahrs_update_gps();
+//#endif
+//#ifdef GPS_TRIGGERED_FUNCTION
+//  GPS_TRIGGERED_FUNCTION();
+//#endif
+//}
+//#endif
 
 
 #if USE_AHRS
