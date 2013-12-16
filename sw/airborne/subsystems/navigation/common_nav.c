@@ -75,9 +75,9 @@ unit_t nav_reset_utm_zone(void) {
 
 #ifdef GPS_USE_LATLONG
   /* Set the real UTM zone */
-  nav_utm_zone0 = (DegOfRad(gps.lla_pos.lon/1e7)+180) / 6 + 1;
+  nav_utm_zone0 = (DegOfRad(_gps->lla_pos.lon/1e7)+180) / 6 + 1;
 #else
-  nav_utm_zone0 = gps.utm_pos.zone;
+  nav_utm_zone0 = _gps->utm_pos.zone;
 #endif
 
   struct UtmCoor_f utm0;
@@ -96,25 +96,25 @@ unit_t nav_reset_utm_zone(void) {
 unit_t nav_reset_reference( void ) {
 #ifdef GPS_USE_LATLONG
   /* Set the real UTM zone */
-  nav_utm_zone0 = (DegOfRad(gps.lla_pos.lon/1e7)+180) / 6 + 1;
+  nav_utm_zone0 = (DegOfRad(_gps->lla_pos.lon/1e7)+180) / 6 + 1;
 
   /* Recompute UTM coordinates in this zone */
   struct LlaCoor_f lla;
-  lla.lat = gps.lla_pos.lat/1e7;
-  lla.lon = gps.lla_pos.lon/1e7;
+  lla.lat = _gps->lla_pos.lat/1e7;
+  lla.lon = _gps->lla_pos.lon/1e7;
   struct UtmCoor_f utm;
   utm.zone = nav_utm_zone0;
   utm_of_lla_f(&utm, &lla);
   nav_utm_east0 = utm.east;
   nav_utm_north0 = utm.north;
 #else
-  nav_utm_zone0 = gps.utm_pos.zone;
-  nav_utm_east0 = gps.utm_pos.east/100;
-  nav_utm_north0 = gps.utm_pos.north/100;
+  nav_utm_zone0 = _gps->utm_pos.zone;
+  nav_utm_east0 = _gps->utm_pos.east/100;
+  nav_utm_north0 = _gps->utm_pos.north/100;
 #endif
 
   previous_ground_alt = ground_alt;
-  ground_alt = gps.hmsl/1000.;
+  ground_alt = _gps->hmsl/1000.;
 
   // reset state UTM ref
   struct UtmCoor_f utm0 = { nav_utm_north0, nav_utm_east0, ground_alt, nav_utm_zone0 };

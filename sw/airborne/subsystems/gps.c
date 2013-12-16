@@ -30,7 +30,7 @@
 
 #define MSEC_PER_WEEK (1000*60*60*24*7)
 
-struct GpsState * gps;
+struct GpsState * _gps;
 
 #if DOWNLINK
 #include "subsystems/datalink/telemetry.h"

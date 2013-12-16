@@ -57,11 +57,20 @@ typedef void (*abi_callback)(void);
 
 /** Event structure to store callbacks in a linked list */
 struct abi_struct {
-  volatile uint8_t id;
+  uint8_t id;
   abi_callback cb;
   struct abi_struct * next;
 };
 typedef struct abi_struct abi_event;
+typedef abi_event * abi_sync_list;
+
+/** Async callbaks struct */
+struct abi_async {
+  volatile uint8_t updated;
+  abi_event * ev;
+};
+typedef struct abi_async abi_async_list;
+
 
 /** Macros for linked list */
 #define ABI_FOREACH(head,el) for(el=head; el; el=el->next)

@@ -32,7 +32,7 @@
 #include <math.h>
 
 #include "state.h"
-#include "subsystems/gps.h"
+//#include "subsystems/gps.h"
 #include "subsystems/nav.h"
 
 #include "generated/airframe.h"
@@ -46,11 +46,18 @@
 #if defined ALT_KALMAN || defined ALT_KALMAN_ENABLED
 #warning Please remove the obsolete ALT_KALMAN and ALT_KALMAN_ENABLED defines from your airframe file.
 #endif
-
 /* vertical position and speed in meters (z-up)*/
 float ins_alt;
 float ins_alt_dot;
 
+// GPS event on ABI
+#ifndef INS_GPS_ID
+#define INS_GPS_ID ABI_BROADCAST
+#endif
+abi_event gps_ev;
+static void gps_cb(uint8_t sender_id, const struct GpsState * gps);
+
+// Baro
 #if USE_BAROMETER
 #include "subsystems/sensors/baro.h"
 #include "math/pprz_isa.h"
@@ -79,6 +86,8 @@ void ins_init() {
 
   alt_kalman_init();
 
+  // Bind to GPS message
+  AbiBindMsgGPS(INS_GPS_ID, &gps_ev, gps_cb);
 #if USE_BAROMETER
   ins_qfe = 0;;
   ins_baro_initialized = FALSE;
@@ -139,24 +148,27 @@ static void baro_cb(uint8_t __attribute__((unused)) sender_id, const float *pres
 
 
 void ins_update_gps(void) {
+}
+
+static void gps_cb(uint8_t __attribute__((unused)) sender_id, const struct GpsState * gps) {
 #if USE_GPS
   struct UtmCoor_f utm;
-  utm.east = gps.utm_pos.east / 100.;
-  utm.north = gps.utm_pos.north / 100.;
+  utm.east = gps->utm_pos.east / 100.;
+  utm.north = gps->utm_pos.north / 100.;
   utm.zone = nav_utm_zone0;
 
 #if !USE_BAROMETER
-  float falt = gps.hmsl / 1000.;
+  float falt = gps->hmsl / 1000.;
   alt_kalman(falt);
-  ins_alt_dot = -gps.ned_vel.z / 100.;
+  ins_alt_dot = -gps->ned_vel.z / 100.;
 #endif
   utm.alt = ins_alt;
   // set position
   stateSetPositionUtm_f(&utm);
 
   struct NedCoor_f ned_vel = {
-    gps.ned_vel.x / 100.,
-    gps.ned_vel.y / 100.,
+    gps->ned_vel.x / 100.,
+    gps->ned_vel.y / 100.,
     -ins_alt_dot
   };
   // set velocity

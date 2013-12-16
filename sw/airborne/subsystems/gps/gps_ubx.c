@@ -174,7 +174,7 @@ void gps_ubx_read_message(void) {
     else if (gps_ubx.msg_id == UBX_NAV_SVINFO_ID) {
       gps_ubx.gps.nb_channels = Min(UBX_NAV_SVINFO_NCH(gps_ubx.msg_buf), GPS_NB_CHANNELS);
       uint8_t i;
-      for(i = 0; i < gps.nb_channels; i++) {
+      for(i = 0; i < gps_ubx.gps.nb_channels; i++) {
         gps_ubx.gps.svinfos[i].svid = UBX_NAV_SVINFO_SVID(gps_ubx.msg_buf, i);
         gps_ubx.gps.svinfos[i].flags = UBX_NAV_SVINFO_Flags(gps_ubx.msg_buf, i);
         gps_ubx.gps.svinfos[i].qi = UBX_NAV_SVINFO_QI(gps_ubx.msg_buf, i);

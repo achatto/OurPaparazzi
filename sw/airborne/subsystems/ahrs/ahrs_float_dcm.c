@@ -39,8 +39,15 @@
 
 #include "state.h"
 
+#include "subsystems/abi.h"
+
 #if USE_GPS
-#include "subsystems/gps.h"
+// GPS event on ABI
+#ifndef AHRS_GPS_ID
+#define AHRS_GPS_ID ABI_BROADCAST
+#endif
+abi_event gps_ev;
+static void gps_cb(uint8_t sender_id, const struct GpsState * gps);
 #endif
 
 #include <string.h>
@@ -139,6 +146,11 @@ void ahrs_init(void) {
   /* set inital filter dcm */
   set_dcm_matrix_from_rmat(&ahrs_impl.body_to_imu_rmat);
 
+#if USE_GPS
+  // Bind to GPS message
+  AbiBindMsgGPS(AHRS_GPS_ID, &gps_ev, gps_cb);
+#endif
+
   ahrs_impl.gps_speed = 0;
   ahrs_impl.gps_acceleration = 0;
   ahrs_impl.gps_course = 0;
@@ -201,17 +213,18 @@ void ahrs_propagate(void)
   compute_ahrs_representations();
 }
 
-void ahrs_update_gps(void)
-{
-  static float last_gps_speed_3d = 0;
+void ahrs_update_gps(void) {}
 
 #if USE_GPS
-  if (gps.fix == GPS_FIX_3D) {
-    ahrs_impl.gps_age = 0;
-    ahrs_impl.gps_speed = gps.speed_3d/100.;
+static void gps_cb(uint8_t __attribute__((unused)) sender_id, const struct GpsState * gps) {
+  static float last_gps_speed_3d = 0;
 
-    if(gps.gspeed >= 500) { //got a 3d fix and ground speed is more than 0.5 m/s
-      ahrs_impl.gps_course = ((float)gps.course)/1.e7;
+  if (gps->fix == GPS_FIX_3D) {
+    ahrs_impl.gps_age = 0;
+    ahrs_impl.gps_speed = gps->speed_3d/100.;
+
+    if(gps->gspeed >= 500) { //got a 3d fix and ground speed is more than 0.5 m/s
+      ahrs_impl.gps_course = ((float)gps->course)/1.e7;
       ahrs_impl.gps_course_valid = TRUE;
     } else {
       ahrs_impl.gps_course_valid = FALSE;
@@ -219,11 +232,11 @@ void ahrs_update_gps(void)
   } else {
     ahrs_impl.gps_age = 100;
   }
-#endif
 
   ahrs_impl.gps_acceleration += (   ((ahrs_impl.gps_speed - last_gps_speed_3d)*4.0f)  - ahrs_impl.gps_acceleration) / 5.0f;
   last_gps_speed_3d = ahrs_impl.gps_speed;
 }
+#endif
 
 
 void ahrs_update_accel(void)
