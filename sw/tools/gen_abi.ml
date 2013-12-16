@@ -54,15 +54,8 @@ module Syntax = struct
   let read = fun filename ->
     let xml = Xml.parse_file filename in
     let sync = try Xml.children (ExtXml.child xml "messages") with _ -> [] in
-    let async = try Xml.children (ExtXml.child xml "async") with _ -> [] in
-    (*let sync, async = List.partition (fun m ->
-      let u = ExtXml.attrib_or_default m "update" "sync" in
-      match u with
-      | "sync" -> true
-      | "async" -> false
-      | _ -> failwith (sprintf "Gen_abi: invalid update type '%s'" u)
-      ) (Xml.children xml) in*)
     let msgs_sync = List.map (struct_of_xml "sync") sync in
+    let async = try Xml.children (ExtXml.child xml "async") with _ -> [] in
     let msgs_async = List.map (struct_of_xml "async") async in
     msgs_sync, msgs_async
 end (* module Suntax *)
@@ -141,8 +134,8 @@ module Gen_onboard = struct
   (* Print a async bind function *)
   let print_async_msg_bind = fun h msg ->
     let name = String.capitalize msg.name in
-    Printf.fprintf h "\nstatic inline void AbiBindAsyncMsg%s(abi_event * ev, abi_callback%s cb) {\n" name name;
-    Printf.fprintf h "  ev->cb = (abi_callback)cb;\n";
+    Printf.fprintf h "\nstatic inline void AbiBindAsyncMsg%s(abi_event * ev, abi_callback cb) {\n" name;
+    Printf.fprintf h "  ev->cb = cb;\n";
     Printf.fprintf h "  ABI_PREPEND(abi_queues_async[ABI_%s_ID].ev, ev);\n" name;
     Printf.fprintf h "}\n"
 
@@ -167,13 +160,11 @@ module Gen_onboard = struct
     List.iter (fun msg ->
       let name = String.capitalize msg.name in
       Printf.fprintf h "  if (abi_queues_async[ABI_%s_ID].updated) {\n" name;
+      Printf.fprintf h "    abi_queues_async[ABI_%s_ID].updated = FALSE;\n" name;
       Printf.fprintf h "    abi_event* e;\n";
       Printf.fprintf h "    ABI_FOREACH(abi_queues_async[ABI_%s_ID].ev, e) {\n" name;
-      Printf.fprintf h "      abi_callback%s cb = (abi_callback%s)(e->cb);\n" name name;
-      Printf.fprintf h "      cb(ABI_BROADCAST";
-      args h msg.fields;
+      Printf.fprintf h "      e->cb();\n";
       Printf.fprintf h "    };\n";
-      Printf.fprintf h "    abi_queues_async[ABI_%s_ID].updated = FALSE;\n" name;
       Printf.fprintf h "  };\n"
     ) messages;
     Printf.fprintf h "};\n"
@@ -234,7 +225,7 @@ let () =
     (** Print general structure definition *)
     Gen_onboard.print_struct h highest_id "async";
     (** Print Messages callbacks definition *)
-    Gen_onboard.print_callbacks h async;
+    (*Gen_onboard.print_callbacks h async;*)
     (** Print Bind and Send functions for all async messages *)
     Gen_onboard.print_async_bind_send h async;
     (** Print Async messages check function *)

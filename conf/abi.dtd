@@ -1,0 +1,26 @@
+<!ELEMENT abi (messages,async)>
+<!ATTLIST abi>
+
+<!ELEMENT messages (message*)>
+<!ATTLIST messages>
+
+<!ELEMENT message (field*)>
+<!ATTLIST message
+  name CDATA #REQUIRED
+>
+
+<!ELEMENT field EMPTY>
+<!ATTLIST field
+  name CDATA #REQUIRED
+  type CDATA #REQUIRED
+  unit CDATA #IMPLIED
+>
+
+<!ELEMENT async (raise*)>
+<!ATTLIST async>
+
+<!ELEMENT raise EMPTY>
+<!ATTLIST raise
+  name CDATA #REQUIRED
+  cond CDATA #IMPLIED
+>
