@@ -57,10 +57,11 @@ uint16_t dc_buffer = 0;
 
 void dc_send_shot_position(void)
 {
+  struct UtmCoor_f * utm = stateGetPositionUtm_f();
   int16_t phi = DegOfRad(stateGetNedToBodyEulers_f()->phi*10.0f);
   int16_t theta = DegOfRad(stateGetNedToBodyEulers_f()->theta*10.0f);
-  float gps_z = ((float)gps.hmsl) / 1000.0f;
-  int16_t course = (DegOfRad(gps.course)/((int32_t)1e6));
+  float gps_z = utm->alt;
+  int16_t course = DegOfRad(*stateGetHorizontalSpeedDir_f());
   int16_t photo_nr = -1;
 
   if (dc_buffer < DC_IMAGE_BUFFER) {
@@ -71,15 +72,15 @@ void dc_send_shot_position(void)
 
   DOWNLINK_SEND_DC_SHOT(DefaultChannel, DefaultDevice,
                         &photo_nr,
-                        &gps.utm_pos.east,
-                        &gps.utm_pos.north,
+                        &utm->east,
+                        &utm->north,
                         &gps_z,
-                        &gps.utm_pos.zone,
+                        &utm->zone,
                         &phi,
                         &theta,
                         &course,
-                        &gps.gspeed,
-                        &gps.tow);
+                        stateGetHorizontalSpeedNorm_f(),
+                        &_gps->tow);
 }
 #endif /* SENSOR_SYNC_SEND */
 

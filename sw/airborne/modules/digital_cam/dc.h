@@ -43,7 +43,7 @@
 #include "state.h"
 #include "subsystems/nav.h"
 #include "generated/airframe.h"
-#include "subsystems/gps.h"
+//#include "subsystems/gps.h"
 
 /* number of images taken since the last change of dc_mode */
 extern uint16_t dc_gps_count;
@@ -243,7 +243,7 @@ static inline void dc_periodic_4Hz( void )
 
   case DC_AUTOSHOOT_DISTANCE:
     {
-      uint32_t dist_to_100m_grid = (gps.utm_pos.north / 100) % 100;
+      uint32_t dist_to_100m_grid = ((int32_t)(stateGetPositionUtm_f()->north)) % 100;
       if (dist_to_100m_grid < dc_autoshoot_meter_grid || 100 - dist_to_100m_grid < dc_autoshoot_meter_grid)
         {
           dc_send_command(DC_SHOOT);

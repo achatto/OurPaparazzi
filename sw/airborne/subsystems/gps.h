@@ -41,7 +41,7 @@
 
 
 #ifndef GPS_NB_CHANNELS
-#define GPS_NB_CHANNELS 1
+#define GPS_NB_CHANNELS 8
 #endif
 
 /** data structure for Space Vehicle Information of a single satellite */

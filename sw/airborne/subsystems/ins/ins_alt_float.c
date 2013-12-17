@@ -54,7 +54,7 @@ float ins_alt_dot;
 #ifndef INS_GPS_ID
 #define INS_GPS_ID ABI_BROADCAST
 #endif
-abi_event gps_ev;
+static abi_event gps_ev;
 static void gps_cb(uint8_t sender_id, const struct GpsState * gps);
 
 // Baro
@@ -72,7 +72,7 @@ float ins_baro_alt;
 #ifndef INS_BARO_ID
 #define INS_BARO_ID BARO_BOARD_SENDER_ID
 #endif
-abi_event baro_ev;
+static abi_event baro_ev;
 static void baro_cb(uint8_t sender_id, const float *pressure);
 #endif /* USE_BAROMETER */
 

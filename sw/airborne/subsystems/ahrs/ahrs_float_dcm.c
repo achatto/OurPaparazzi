@@ -46,7 +46,7 @@
 #ifndef AHRS_GPS_ID
 #define AHRS_GPS_ID ABI_BROADCAST
 #endif
-abi_event gps_ev;
+static abi_event gps_ev;
 static void gps_cb(uint8_t sender_id, const struct GpsState * gps);
 #endif
 

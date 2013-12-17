@@ -37,7 +37,16 @@
 
 #include "state.h"
 
+#include "subsystems/abi.h"
+
 float heading;
+
+// GPS event on ABI
+#ifndef AHRS_GPS_ID
+#define AHRS_GPS_ID ABI_BROADCAST
+#endif
+abi_event gps_ev;
+static void gps_cb(uint8_t sender_id, const struct GpsState * gps);
 
 #if DOWNLINK
 #include "subsystems/datalink/telemetry.h"
@@ -59,6 +68,8 @@ void ahrs_init(void) {
   ahrs.status = AHRS_UNINIT;
 
   heading = 0.;
+
+  AbiBindMsgGPS(AHRS_GPS_ID, &gps_ev, gps_cb);
 
 #if DOWNLINK
   register_periodic_telemetry(DefaultPeriodic, "IR_SENSORS", send_infrared);
@@ -93,10 +104,12 @@ void ahrs_update_accel(void) {
 void ahrs_update_mag(void) {
 }
 
-void ahrs_update_gps(void) {
+void ahrs_update_gps(void) {}
 
-  float hspeed_mod_f = gps.gspeed / 100.;
-  float course_f = gps.course / 1e7;
+static void gps_cb(uint8_t __attribute__((unused)) sender_id, const struct GpsState * gps) {
+
+  float hspeed_mod_f = gps->gspeed / 100.;
+  float course_f = gps->course / 1e7;
 
   // Heading estimator from wind-information, usually computed with -DWIND_INFO
   // wind_north and wind_east initialized to 0, so still correct if not updated

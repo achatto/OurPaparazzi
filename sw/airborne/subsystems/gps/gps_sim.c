@@ -20,9 +20,11 @@
  */
 
 #include "subsystems/gps.h"
+#include "subsystems/abi.h"
 
 bool_t gps_available;
 
+static struct GpsState gps;
 
 #if 0
 void  gps_feed_values(double utm_north, double utm_east, double utm_alt, double gspeed, double course, double climb) {
@@ -38,7 +40,18 @@ void  gps_feed_values(double utm_north, double utm_east, double utm_alt, double 
 }
 #endif
 
-void gps_impl_init(void) {
+struct GpsState * gps_impl_init(void) {
   gps.fix = GPS_FIX_NONE;
   gps_available = FALSE;
+  return &gps;
+}
+
+void GpsEvent(void) {
+  if (gps_available) {
+    if (gps.fix == GPS_FIX_3D) {
+      gps.last_fix_time = sys_time.nb_sec;
+    }
+    AbiSendMsgGPS(GPS_SIM_SENDER_ID, &gps);
+    gps_available = FALSE;
+  }
 }
