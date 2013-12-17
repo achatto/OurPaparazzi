@@ -37,9 +37,6 @@
 #define GPS_FIX_2D   0x02
 #define GPS_FIX_3D   0x03
 
-#define GpsFixValid() (_gps->fix == GPS_FIX_3D)
-
-
 #ifndef GPS_NB_CHANNELS
 #define GPS_NB_CHANNELS 8
 #endif
@@ -89,8 +86,12 @@ struct GpsTimeSync {
   uint32_t t0_ticks;    ///< hw clock ticks when GPS message is received
 };
 
-/** global GPS state */
+#ifdef SITL
+/** global GPS state
+ * we need an external definition for the simulation
+ */
 extern struct GpsState * _gps;
+#endif
 
 /** initialize the global GPS state */
 extern void gps_init(void);
@@ -111,15 +112,12 @@ extern struct GpsState * gps_impl_init(void);
 #define GPS_TIMEOUT 5
 #endif
 
-inline bool_t GpsIsLost(void);
+extern bool_t GpsIsLost(void);
 
-inline bool_t GpsIsLost(void) {
-  if (sys_time.nb_sec - _gps->last_fix_time > GPS_TIMEOUT) {
-    _gps->fix = GPS_FIX_NONE;
-    return TRUE;
-  }
-  return FALSE;
-}
+extern uint32_t GpsTimeSinceLastFix(void);
+
+extern bool_t GpsFixValid(void);
+
 
 
 /**

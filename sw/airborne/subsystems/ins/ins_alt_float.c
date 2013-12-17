@@ -32,7 +32,6 @@
 #include <math.h>
 
 #include "state.h"
-//#include "subsystems/gps.h"
 #include "subsystems/nav.h"
 
 #include "generated/airframe.h"
@@ -50,20 +49,20 @@
 float ins_alt;
 float ins_alt_dot;
 
+#if USE_GPS
 // GPS event on ABI
 #ifndef INS_GPS_ID
 #define INS_GPS_ID ABI_BROADCAST
 #endif
 static abi_event gps_ev;
 static void gps_cb(uint8_t sender_id, const struct GpsState * gps);
+#endif
 
 // Baro
 #if USE_BAROMETER
 #include "subsystems/sensors/baro.h"
 #include "math/pprz_isa.h"
-
 PRINT_CONFIG_MSG("USE_BAROMETER is TRUE: Using baro for altitude estimation.")
-
 float ins_qfe;
 bool_t  ins_baro_initialized;
 float ins_baro_alt;
@@ -86,8 +85,11 @@ void ins_init() {
 
   alt_kalman_init();
 
+#if USE_GPS
   // Bind to GPS message
   AbiBindMsgGPS(INS_GPS_ID, &gps_ev, gps_cb);
+#endif
+
 #if USE_BAROMETER
   ins_qfe = 0;;
   ins_baro_initialized = FALSE;
@@ -150,8 +152,8 @@ static void baro_cb(uint8_t __attribute__((unused)) sender_id, const float *pres
 void ins_update_gps(void) {
 }
 
-static void gps_cb(uint8_t __attribute__((unused)) sender_id, const struct GpsState * gps) {
 #if USE_GPS
+static void gps_cb(uint8_t __attribute__((unused)) sender_id, const struct GpsState * gps) {
   struct UtmCoor_f utm;
   utm.east = gps->utm_pos.east / 100.;
   utm.north = gps->utm_pos.north / 100.;
@@ -174,8 +176,8 @@ static void gps_cb(uint8_t __attribute__((unused)) sender_id, const struct GpsSt
   // set velocity
   stateSetSpeedNed_f(&ned_vel);
 
-#endif
 }
+#endif
 
 void ins_update_sonar() {
 }

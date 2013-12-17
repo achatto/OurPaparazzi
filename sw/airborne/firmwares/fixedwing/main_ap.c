@@ -450,7 +450,7 @@ void reporting_task( void ) {
 
 
 #ifdef FAILSAFE_DELAY_WITHOUT_GPS
-#define GpsTimeoutError (sys_time.nb_sec - _gps->last_fix_time > FAILSAFE_DELAY_WITHOUT_GPS)
+#define GpsTimeoutError (GpsTimeSinceLastFix() > FAILSAFE_DELAY_WITHOUT_GPS)
 #endif
 
 /**

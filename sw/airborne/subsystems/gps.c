@@ -115,6 +115,22 @@ void gps_init(void) {
 #endif
 }
 
+bool_t GpsIsLost(void) {
+  if (sys_time.nb_sec - _gps->last_fix_time > GPS_TIMEOUT) {
+    _gps->fix = GPS_FIX_NONE;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+uint32_t GpsTimeSinceLastFix(void) {
+  return sys_time.nb_sec - _gps->last_fix_time;
+}
+
+bool_t GpsFixValid(void) {
+  return (_gps->fix == GPS_FIX_3D);
+}
+
 uint32_t gps_tow_from_sys_ticks(struct GpsTimeSync * gps_time, uint32_t sys_ticks)
 {
   uint32_t clock_delta;
