@@ -366,17 +366,6 @@ let broadcast = fun device payload _priority ->
         XB.send device payload
 
 
-(*************** Audio *******************************************************)
-module Audio = struct
-  let use_data =
-    let buffer = ref "" in
-    fun data ->
-      let b = !buffer ^ data in
-      let n = PprzTransport.parse use_tele_message b in
-      buffer := String.sub b n (String.length b - n)
-end
-
-
 
 let parser_of_device = fun device ->
   match device.transport with
@@ -457,14 +446,12 @@ let () =
   and hw_flow_control = ref false
   and transport = ref "pprz"
   and uplink = ref true
-  and audio = ref false
   and aerocomm = ref false
   and udp_port = ref 4242 in
 
   (* Parse command line options *)
   let options =
     [ "-aerocomm", Arg.Set aerocomm, "Set serial Aerocomm data mode";
-      "-audio", Arg.Unit (fun () -> audio := true; port := "/dev/dsp"), (sprintf "Listen a modulated audio signal on <port>. Sets <port> to /dev/dsp (the -d option must used after this one if needed)");
       "-b", Arg.Set_string ivy_bus, (sprintf "<ivy bus> Default is %s" !ivy_bus);
       "-d", Arg.Set_string port, (sprintf "<port> Default is %s" !port);
       "-dtr", Arg.Set aerocomm, "Set serial DTR to false (deprecated)";
@@ -497,7 +484,7 @@ let () =
   try
     let transport = transport_of_string !transport in
 
-    (** Listen on audio input or on a serial device or on multimon pipe *)
+    (** Listen on a serial device *)
     let on_serial_device =
       String.length !port >= 4 && String.sub !port 0 4 = "/dev" in (* FIXME *)
     let fd =
@@ -506,9 +493,7 @@ let () =
         and socket = Unix.socket Unix.PF_INET Unix.SOCK_DGRAM 0 in
         Unix.bind socket sockaddr;
         socket
-      end else if !audio then
-          Demod.init !port
-        else if on_serial_device then
+      end else if on_serial_device then
           Serial.opendev !port (Serial.speed_of_baudrate !baudrate) !hw_flow_control
         else
           Unix.openfile !port [Unix.O_RDWR] 0o640
@@ -520,24 +505,18 @@ let () =
 
     (* The function to be called when data is available *)
     let read_fd =
-      if !audio then
-        fun _io_event ->  (* Demodulation *)
-          let (data_left, _data_right) = Demod.get_data () in
-          Audio.use_data data_left;
-          true (* Returns true to be called again *)
-      else (* Buffering and parsing *)
-        let buffered_parser =
-          (* Get the specific parser for the given transport protocol *)
-          let parser = parser_of_device device in
-          let read = if !udp then udp_read else Unix.read in
-          (* Wrap the parser into the buffered bytes reader *)
-          match Serial.input ~read parser with Serial.Closure f -> f in
-        fun _io_event ->
-          begin
-            try buffered_parser fd with
-                exc -> prerr_endline (Printexc.to_string exc)
-          end;
-          true (* Returns true to be called again *)
+      let buffered_parser =
+        (* Get the specific parser for the given transport protocol *)
+        let parser = parser_of_device device in
+        let read = if !udp then udp_read else Unix.read in
+        (* Wrap the parser into the buffered bytes reader *)
+        match Serial.input ~read parser with Serial.Closure f -> f in
+      fun _io_event ->
+        begin
+          try buffered_parser fd with
+              exc -> prerr_endline (Printexc.to_string exc)
+        end;
+        true (* Returns true to be called again *)
     in
     ignore (Glib.Io.add_watch [`HUP] hangup (GMain.Io.channel_of_descr fd));
     ignore (Glib.Io.add_watch [`IN] read_fd (GMain.Io.channel_of_descr fd));
