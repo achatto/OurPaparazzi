@@ -75,6 +75,23 @@ bool indi_use_adaptive = true;
 bool indi_use_adaptive = false;
 #endif
 
+#ifdef STABILIZATION_INDI_ACT_RATE_LIMIT
+float act_rate_limit[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_RATE_LIMIT;
+#endif
+
+#ifdef STABILIZATION_INDI_ACT_IS_SERVO
+bool act_is_servo[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_IS_SERVO;
+#else
+bool act_is_servo[INDI_NUM_ACT] = {0};
+#endif
+
+float act_dyn[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_DYN;
+
+/** Maximum rate you can request in RC rate mode (rad/s)*/
+#ifndef STABILIZATION_INDI_MAX_RATE
+#define STABILIZATION_INDI_MAX_RATE 6.0
+#endif
+
 // variables needed for control
 float actuator_state_filt_vect[INDI_NUM_ACT];
 struct FloatRates angular_accel_ref = {0., 0., 0.};
@@ -140,6 +157,20 @@ static void send_indi_g(struct transport_tx *trans, struct link_device *dev)
                                           INDI_NUM_ACT, g1_est[3],
                                           INDI_NUM_ACT, g2_est);
 }
+
+static void send_ahrs_ref_quat(struct transport_tx *trans, struct link_device *dev)
+{
+  struct Int32Quat *quat = stateGetNedToBodyQuat_i();
+  pprz_msg_send_AHRS_REF_QUAT(trans, dev, AC_ID,
+                              &stab_att_sp_quat.qi,
+                              &stab_att_sp_quat.qx,
+                              &stab_att_sp_quat.qy,
+                              &stab_att_sp_quat.qz,
+                              &(quat->qi),
+                              &(quat->qx),
+                              &(quat->qy),
+                              &(quat->qz));
+}
 #endif
 
 /**
@@ -171,24 +202,23 @@ void stabilization_indi_init(void)
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_INDI_G, send_indi_g);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_AHRS_REF_QUAT, send_ahrs_ref_quat);
 #endif
 }
 
 /**
- * Function that resets important values upon engaging INDI
+ * Function that resets important values upon engaging INDI.
+ *
+ * Don't reset inputs and filters, because it is unlikely to switch stabilization in flight,
+ * and there are multiple modes that use (the same) stabilization. Resetting the controller
+ * is not so nice when you are flying.
+ * FIXME: Ideally we should detect when coming from something that is not INDI
  */
 void stabilization_indi_enter(void)
 {
   /* reset psi setpoint to current psi angle */
   stab_att_sp_euler.psi = stabilization_attitude_get_heading_i();
 
-  // reset filters
-  init_filters();
-
-
-  float_vect_zero(actuator_state, INDI_NUM_ACT);
-  float_vect_zero(indi_u, INDI_NUM_ACT);
-  float_vect_zero(indi_du, INDI_NUM_ACT);
   float_vect_zero(du_estimation, INDI_NUM_ACT);
   float_vect_zero(ddu_estimation, INDI_NUM_ACT);
 }
@@ -276,13 +306,31 @@ void stabilization_indi_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t heading)
  */
 static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_control, bool in_flight)
 {
+
+  struct FloatRates rate_ref;
+  if(rate_control) {//Check if we are running the rate controller
+    rate_ref.p = (float)radio_control.values[RADIO_ROLL]  / MAX_PPRZ * STABILIZATION_INDI_MAX_RATE;
+    rate_ref.q = (float)radio_control.values[RADIO_PITCH] / MAX_PPRZ * STABILIZATION_INDI_MAX_RATE;
+    rate_ref.r = (float)radio_control.values[RADIO_YAW]   / MAX_PPRZ * STABILIZATION_INDI_MAX_RATE;
+  } else {
+    //calculate the virtual control (reference acceleration) based on a PD controller
+    rate_ref.p = reference_acceleration.err_p * QUAT1_FLOAT_OF_BFP(att_err->qx)
+      /reference_acceleration.rate_p;
+    rate_ref.q = reference_acceleration.err_q * QUAT1_FLOAT_OF_BFP(att_err->qy)
+      /reference_acceleration.rate_q;
+    rate_ref.r = reference_acceleration.err_r * QUAT1_FLOAT_OF_BFP(att_err->qz)
+      /reference_acceleration.rate_r;
+
+    // Possibly we can use some bounding here
+    /*BoundAbs(rate_ref.r, 5.0);*/
+  }
+
+  struct FloatRates *body_rates = stateGetBodyRates_f();
+
   //calculate the virtual control (reference acceleration) based on a PD controller
-  angular_accel_ref.p = reference_acceleration.err_p * QUAT1_FLOAT_OF_BFP(att_err->qx)
-                        - reference_acceleration.rate_p * stateGetBodyRates_f()->p;
-  angular_accel_ref.q = reference_acceleration.err_q * QUAT1_FLOAT_OF_BFP(att_err->qy)
-                        - reference_acceleration.rate_q * stateGetBodyRates_f()->q;
-  angular_accel_ref.r = reference_acceleration.err_r * QUAT1_FLOAT_OF_BFP(att_err->qz)
-                        - reference_acceleration.rate_r * stateGetBodyRates_f()->r;
+  angular_accel_ref.p = (rate_ref.p - body_rates->p) * reference_acceleration.rate_p;
+  angular_accel_ref.q = (rate_ref.q - body_rates->q) * reference_acceleration.rate_q;
+  angular_accel_ref.r = (rate_ref.r - body_rates->r) * reference_acceleration.rate_r;
 
   g2_times_du = 0.0;
   int8_t i;
@@ -334,7 +382,11 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
 
   // Bound the inputs to the actuators
   for(i=0; i<INDI_NUM_ACT; i++) {
-    Bound(indi_u[i], 0, MAX_PPRZ);
+    if(act_is_servo[i]) {
+      BoundAbs(indi_u[i], MAX_PPRZ);
+    } else {
+      Bound(indi_u[i], 0, MAX_PPRZ);
+    }
   }
 
   // Propagate actuator filters
@@ -353,6 +405,7 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
   //Don't increment if thrust is off
   if(!in_flight) {
     float_vect_zero(indi_u, INDI_NUM_ACT);
+    float_vect_zero(actuator_state_filt_vect, INDI_NUM_ACT);
   }
   else if(indi_use_adaptive) {
     lms_estimation();
@@ -426,7 +479,9 @@ void stabilization_indi_read_rc(bool in_flight, bool in_carefree, bool coordinat
 
 /**
  * Function that tries to get actuator feedback.
+ *
  * If this is not available it will use a first order filter to approximate the actuator state.
+ * It is also possible to model rate limits (unit: PPRZ/loop cycle)
  */
 void get_actuator_state(void) {
 #if INDI_RPM_FEEDBACK
@@ -434,10 +489,22 @@ void get_actuator_state(void) {
 #else
   //actuator dynamics
   int8_t i;
+  float UNUSED prev_actuator_state;
   for(i=0; i<INDI_NUM_ACT; i++) {
+    prev_actuator_state = actuator_state[i];
+
     actuator_state[i] = actuator_state[i]
-      + STABILIZATION_INDI_ACT_DYN*( indi_u[i] - actuator_state[i]);
+      + act_dyn[i]*( indi_u[i] - actuator_state[i]);
+
+#ifdef STABILIZATION_INDI_ACT_RATE_LIMIT
+    if((actuator_state[i] - prev_actuator_state) > act_rate_limit[i]) {
+      actuator_state[i] = prev_actuator_state + act_rate_limit[i];
+    } else if((actuator_state[i] - prev_actuator_state) < -act_rate_limit[i]) {
+      actuator_state[i] = prev_actuator_state - act_rate_limit[i];
+    }
+#endif
   }
+
 #endif
 }
 
@@ -592,19 +659,21 @@ void calc_g1g2_pseudo_inv(void) {
   }
 }
 
-static void rpm_cb(uint8_t __attribute__((unused)) sender_id, uint16_t *rpm, uint8_t num_act)
+static void rpm_cb(uint8_t __attribute__((unused)) sender_id, uint16_t UNUSED *rpm, uint8_t UNUSED num_act)
 {
+#if INDI_RPM_FEEDBACK
   int8_t i;
   for(i=0; i<num_act; i++) {
     act_obs[i] = (rpm[i] - get_servo_min(i));
     act_obs[i] *= (MAX_PPRZ / (float)(get_servo_max(i)-get_servo_min(i)));
   }
+#endif
 }
 
 /**
  * ABI callback that obtains the thrust increment from guidance INDI
  */
-static void thrust_cb(uint8_t sender_id, float thrust_increment)
+static void thrust_cb(uint8_t UNUSED sender_id, float thrust_increment)
 {
   indi_thrust_increment = thrust_increment;
   indi_thrust_increment_set = true;

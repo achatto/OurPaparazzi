@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Kirk Scheper
+ * Copyright (C) 2012 Ewoud Smeur <ewoud_smeur@msn.com>
  *
  * This file is part of paparazzi.
  *
@@ -17,32 +17,22 @@
  * along with paparazzi; see the file COPYING.  If not, write to
  * the Free Software Foundation, 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
+ */
+
+/** @file modules/servo_tester/servo_tester.h
  *
+ * Module useful for testing a servo and finding the response
  */
 
-/** @file modules/stereocam/stereocam.h
- *  @brief interface to the TU Delft serial stereocam
- */
+#ifndef SERVO_TESTER_H
+#define SERVO_TESTER_H
 
-#ifndef STEREOCAM_H_
-#define STEREOCAM_H_
+#include "generated/airframe.h"
 
-#include <std.h>
+extern int32_t servo_test_val;
+extern bool do_servo_run;
 
-typedef struct {
-  uint8_t len;
-  uint8_t *data;
-  uint8_t fresh;
-  uint8_t matrix_width;
-  uint8_t matrix_height;
-} uint8array;
+void servo_tester_init(void);
+void servo_tester_periodic(void);
 
-extern uint8array stereocam_data;
-extern struct FloatRMat body_to_stereocam;
-
-extern void stereocam_disparity_to_meters(uint8_t *, float *, int);
-extern void stereocam_start(void);
-extern void stereocam_stop(void);
-extern void stereocam_periodic(void);
-
-#endif /* STEREOCAM_H_ */
+#endif /* SERVO_TESTER_H */
