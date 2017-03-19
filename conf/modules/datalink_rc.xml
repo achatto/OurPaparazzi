@@ -11,7 +11,7 @@
   </header>
   <init fun="datalink_rc_init()"/>
   <datalink message="RC_5CH" fun="dl_parse_datalink_rc_5ch()"/>
-  <makefile>
+  <makefile target="ap">
     <file name="datalink_rc.c"/>
   </makefile>
 </module>
