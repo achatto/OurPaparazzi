@@ -61,6 +61,43 @@ let output_modes = fun out_h process_name telem_type modes freq ->
         let _type = if m >= 256 then "uint16_t" else "uint8_t" in
         lprintf out_h "static %s %s = 0; %s++; if (%s>=%d) %s=0;\n" _type v v v m v;
       ) modulos;
+			
+			(** Print scheduling logic **)
+			(** values are for 60Hz telemetry, make configurable **)
+			lprintf out_h "\n    static uint8_t mute = MUTE_UNINIT;
+    static uint32_t mute_time_start = 0;
+    static uint32_t mute_time_stop = 0;
+    uint32_t timestamp = get_sys_time_msec();
+
+    switch (mute) {
+      case MUTE_UNINIT:
+        // mute every 50ms, set to a future time
+        mute_time_start = timestamp + 50;
+        mute = MUTE_PENDING;
+        break;
+      case MUTE_PENDING:
+        // check if we are due to mute
+        if (timestamp > mute_time_start) {
+          // update end time
+          mute_time_stop = timestamp + 3;
+          mute = MUTE_RUNNING;
+          return;
+        }
+        break;
+      case MUTE_RUNNING:
+        // check if we should end mute
+        if (timestamp > mute_time_stop) {
+					mute_time_start = timestamp + 50;
+          mute = MUTE_PENDING;
+        } else {
+          // return from the function
+          return;
+        }
+        break;
+      default:
+        // do nothing
+        break;
+    }\n\n";
 
       (* create var to loop trough callbacks if needed *)
       if (List.length messages > 0) then
@@ -207,6 +244,12 @@ let print_process_send = fun out_h xml freq ->
       fprintf out_h "#else /* PERIODIC_C_%s not defined (general header) */\n" (String.uppercase process_name);
       fprintf out_h "extern uint8_t telemetry_mode_%s;\n" process_name;
       fprintf out_h "#endif /* PERIODIC_C_%s */\n" (String.uppercase process_name);
+			
+			(** Print scheduling enum **)
+			fprintf out_h "\n/* Defines for the scheduler */\n";
+			fprintf out_h "#define MUTE_UNINIT 0\n";
+		  fprintf out_h "#define MUTE_PENDING 1\n";
+  		fprintf out_h "#define MUTE_RUNNING 2\n\n";
 
       lprintf out_h "static inline void periodic_telemetry_send_%s(struct periodic_telemetry *telemetry, struct transport_tx *trans, struct link_device *dev) {  /* %dHz */\n" process_name freq;
       right ();
@@ -241,6 +284,8 @@ let _ =
   fprintf out_h "#include \"std.h\"\n";
   fprintf out_h "#include \"generated/airframe.h\"\n";
   fprintf out_h "#include \"subsystems/datalink/telemetry_common.h\"\n\n";
+	fprintf out_h "#include \"mcu_periph/sys_time.h\"\n\n";
+	fprintf out_h "#include <stdio.h>\n\n";
   fprintf out_h "#define TELEMETRY_FREQUENCY %d\n\n" freq;
 
   (** Print the telemetry table with ID *)
