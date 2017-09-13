@@ -1,0 +1,22 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="crypto" dir="crypto">
+  <doc>
+    <description>
+      GEC module
+    </description>
+  </doc>
+  <header>
+    <file name="crypto.h"/>
+  </header>
+  <makefile target="ap">
+    <define name="DATALINK_CRYPTO" value="1"/>
+    <file name="crypto.c"/>
+    <file name="gec-ke.c"/>
+    <file name="gec.c"/>
+    <file name="gcm.c" dir="modules/crypto/aes"/>
+    <file name="curve25519-donna.c" dir="modules/crypto/curve25519"/>
+    <file name="ed25519.c" dir="modules/crypto/ed25519"/>
+  </makefile>
+</module>
+

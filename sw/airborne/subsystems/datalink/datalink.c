@@ -53,10 +53,31 @@ bool datalink_enabled = true;
 #endif
 
 
+#if DATALINK_CRYPTO
+#include "modules/crypto/crypto.h"
+
+// this will be eventually generated into settings.h
+// key comes here
+#endif
+
+
 void dl_parse_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf)
 {
   uint8_t sender_id = SenderIdOfPprzMsg(buf);
   uint8_t msg_id = IdOfPprzMsg(buf);
+
+  /* If using crypto, check what is our crypto status */
+  if (crypto.connected) {
+    // decrypt and authenticate message
+    if (!crypto_decrypt_and_authenticate(buf)) {
+      // decryption or authentication error
+      // update status
+      return;
+    } // else continue in execution
+  } else {
+    // perform key exchange
+    crypto_key_exchange(buf);
+  }
 
   /* parse telemetry messages coming from other AC */
   if (sender_id != 0) {
