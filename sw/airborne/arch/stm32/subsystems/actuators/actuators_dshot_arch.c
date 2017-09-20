@@ -36,16 +36,38 @@
 
 #include "mcu_periph/gpio_arch.h"
 
-#define DSHOT_HZ  15000
+#define DSHOT_HZ  100000
 
 // 1MHz / 150khz = 6.666
 
-#define MOTOR_BIT_0  20
-#define MOTOR_BIT_1  40
+#define MOTOR_BIT_0  3
+#define MOTOR_BIT_1  7
 
 
 
 int32_t actuators_dshot_values[ACTUATORS_DSHOT_NB];
+
+
+
+typedef struct
+{
+  // Userspace variable
+  uint8_t requestTelemetry;
+
+  // Multithread variable
+  volatile uint16_t dshotcode;
+
+  // ISR variables
+  uint8_t progress;
+  uint16_t buff[16];
+} actuator_dshot_motor;
+
+
+static actuator_dshot_motor actuator_dshot_motors[4];
+
+
+static void loadDmaBufferDshot(actuator_dshot_motor *const motor);
+uint16_t prepareDshotPacket(actuator_dshot_motor *const motor, const uint16_t value);
 
 void actuators_dshot_arch_init(void) {
 
@@ -142,52 +164,45 @@ void actuators_dshot_arch_init(void) {
 
 
 #if PWM_USE_TIM4
+#warning YOU_SELECTED_A_LISA_S
   nvic_set_priority(NVIC_TIM4_IRQ, 2);
   nvic_enable_irq(NVIC_TIM4_IRQ);
   timer_enable_irq(TIM4, TIM_DIER_CC1IE);
 #endif
 
 #if PWM_USE_TIM3
-#warning COOL_IT_WORKS
+#warning YOU_SELECTED_A_LISA_MX_S
   nvic_set_priority(NVIC_TIM3_IRQ, 2);
   nvic_enable_irq(NVIC_TIM3_IRQ);
   timer_enable_irq(TIM3, TIM_DIER_CC1IE);
 #endif
 
+
+  for (int i=0; i<4; i++) {
+    actuator_dshot_motors[i].requestTelemetry = 0;
+    prepareDshotPacket(&actuator_dshot_motors[i],1000);
+    loadDmaBufferDshot(&actuator_dshot_motors[i]);
+  }
 }
 
 
-typedef struct
-{
-  // Userspace variable
-  uint8_t requestTelemetry;
-
-  // Multithread variable
-  volatile uint16_t dshotcode;
-
-  // ISR variables
-  uint8_t progress;
-  uint8_t buff[16];
-} actuator_dshot_motor;
-
-
-static actuator_dshot_motor actuator_dshot_motors[4];
-
-static void loadDmaBufferDshot(actuator_dshot_motor *const motor);
 static void loadDmaBufferDshot(actuator_dshot_motor *const motor)
 {
   uint16_t packet = motor->dshotcode;
   for (int i = 0; i < 16; i++) {
-    motor->buff[i] = (packet & 0x8000) ? MOTOR_BIT_1 : MOTOR_BIT_0;  // MSB first
-    packet <<= 1_;
+    if (packet & 0x8000) {
+      motor->buff[i] = MOTOR_BIT_1;  // MSB first
+    } else {
+      motor->buff[i] = MOTOR_BIT_0;
+    }
+    packet <<= 1;
   }
 }
 
-uint16_t prepareDshotPacket(actuator_dshot_motor *const motor, const uint16_t value);
 uint16_t prepareDshotPacket(actuator_dshot_motor *const motor, const uint16_t value)
 {
   uint16_t packet = (value << 1) | (motor->requestTelemetry ? 1 : 0);
-  motor->requestTelemetry = false;    // reset telemetry request to make sure it's triggered only once in a row
+  motor->requestTelemetry = 0;    // reset telemetry request to make sure it's triggered only once in a row
 
   // compute checksum
   int csum = 0;
@@ -200,22 +215,24 @@ uint16_t prepareDshotPacket(actuator_dshot_motor *const motor, const uint16_t va
   // append checksum
   packet = (packet << 4) | csum;
 
+  motor->dshotcode = packet;
   return packet;
 }
 
-void dshot_isr(void);
-void dshot_isr(void)
+//void dshot_isr(void);
+static inline void dshot_isr(void)
 {
-  actuator_dshot_motors[0].progress++;
-  uint8_t status = actuator_dshot_motors[0].progress;
+//  actuator_dshot_motors[0].progress++;
+  static uint8_t status = 0; //actuator_dshot_motors[0].progress;
+  status++;
 
   for (int i=0; i<4; i++) {
-    if (status == 255) {
-      loadDmaBufferDshot(actuator_dshot_motors[i]);
+    if (status == 32) {
+      loadDmaBufferDshot(&actuator_dshot_motors[i]);
     }
+
     if (status < 16)
     {
-      actuator_dshot_motors[0].buff[status]
 #ifdef PWM_SERVO_0
   timer_set_oc_value(PWM_SERVO_0_TIMER, PWM_SERVO_0_OC, actuator_dshot_motors[0].buff[status]);
 #endif
@@ -242,15 +259,29 @@ void dshot_isr(void)
   timer_set_oc_value(PWM_SERVO_3_TIMER, PWM_SERVO_3_OC, 0);
 #endif
     }
-    }
   }
 }
 
 
+
+
+#if PWM_USE_TIM4
 void tim4_isr(void)
 {
+  timer_clear_flag(TIM4, TIM_SR_CC1IF);
+
   dshot_isr();
 }
+#endif
+
+#if PWM_USE_TIM3
+void tim3_isr(void)
+{
+  timer_clear_flag(TIM3, TIM_SR_CC1IF);
+
+  dshot_isr();
+}
+#endif
 
 /** Set pulse widths from actuator values, assumed to be in us
  */
@@ -258,7 +289,8 @@ void tim4_isr(void)
 void actuators_dshot_commit(void) {
   for (int i = 0; i< 4; i++){
     actuator_dshot_motors[i].requestTelemetry = 0;
-    actuator_dshot_motors[i].dshotcode = prepareDshotPacket(&actuator_dshot_motors[i],  actuators_dshot_values[i]);
+    //actuators_dshot_values[i] = 1500;
+    prepareDshotPacket(&actuator_dshot_motors[i],  actuators_dshot_values[i]);
   }
 }
 

@@ -32,11 +32,11 @@
 
 <airframe name="quadrotor_lisa_s">
 
-  <servos driver="Pwm">
-    <servo name="LEFT" no="4" min="1000" neutral="1100" max="1900"/>
-    <servo name="FRONT" no="5" min="1000" neutral="1100" max="1900"/>
-    <servo name="RIGHT" no="1" min="1000" neutral="1100" max="1900"/>
-    <servo name="BACK" no="0" min="1000" neutral="1100" max="1900"/>
+  <servos driver="Dshot">
+    <servo name="LEFT" no="2" min="47" neutral="100" max="2047"/>
+    <servo name="FRONT" no="3" min="47" neutral="100" max="2047"/>
+    <servo name="RIGHT" no="1" min="47" neutral="100" max="2047"/>
+    <servo name="BACK" no="0" min="47" neutral="100" max="2047"/>
   </servos>
 
   <commands>
@@ -209,12 +209,12 @@
     </target>
 
     <module name="motor_mixing"/>
-    <module name="actuators" type="pwm">
+    <module name="actuators" type="dshot">
       <define name="SERVO_HZ" value="400"/>
       <define name="USE_SERVOS_1AND2"/>
     </module>
 
-    <module name="telemetry" type="superbitrf"/>
+    <module name="telemetry" type="transparent"/>
     <module name="imu" type="lisa_s_v1.0"/>
     <module name="gps" type="ublox"/>
     <module name="stabilization" type="int_quat"/>
