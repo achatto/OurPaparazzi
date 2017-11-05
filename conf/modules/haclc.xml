@@ -19,7 +19,10 @@
     <raw>
       # to not use 128 bit arithmetic
       ap.CFLAGS += -DKRML_NOUINT128
+      # generate asymmetric keys
       GENERATE_KEYS = 1
+      # turn off parenthese warnings
+      ap.CFLAGS += -Wno-parentheses
     </raw>
   </makefile>
 </module>

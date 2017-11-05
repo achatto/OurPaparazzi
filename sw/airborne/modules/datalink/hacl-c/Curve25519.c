@@ -647,10 +647,10 @@ static void
 Hacl_EC_Ladder_SmallLoop_cmult_small_loop_step_1(
   uint64_t *nq,
   uint64_t *nqpq,
-  uint64_t *nq2,
-  uint64_t *nqpq2,
-  uint64_t *q,
-  uint8_t byt
+  uint64_t *nq2 __attribute__((unused)),
+  uint64_t *nqpq2 __attribute__((unused)),
+  uint64_t *q __attribute__((unused)),
+  uint8_t byt __attribute__((unused))
 )
 {
   uint64_t bit = (uint64_t )(byt >> (uint32_t )7);
@@ -664,7 +664,7 @@ Hacl_EC_Ladder_SmallLoop_cmult_small_loop_step_2(
   uint64_t *nq2,
   uint64_t *nqpq2,
   uint64_t *q,
-  uint8_t byt
+  uint8_t byt __attribute__((unused))
 )
 {
   Hacl_EC_AddAndDouble_fmonty(nq2, nqpq2, nq, nqpq, q);
@@ -947,7 +947,7 @@ static void
 Hacl_EC_crypto_scalarmult__(
   uint8_t *mypublic,
   uint8_t *scalar,
-  uint8_t *basepoint,
+  uint8_t *basepoint __attribute__((unused)),
   uint64_t *q
 )
 {
@@ -988,7 +988,7 @@ void Hacl_EC_crypto_scalarmult(uint8_t *mypublic, uint8_t *secret, uint8_t *base
   Hacl_EC_crypto_scalarmult_(mypublic, secret, basepoint, q);
 }
 
-void *Curve25519_op_String_Access(FStar_Monotonic_HyperStack_mem h, uint8_t *b)
+void *Curve25519_op_String_Access(FStar_Monotonic_HyperStack_mem h __attribute__((unused)), uint8_t *b __attribute__((unused)))
 {
   return (void *)(uint8_t )0;
 }

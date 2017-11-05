@@ -1185,7 +1185,7 @@ Hacl_Impl_Ed25519_Ladder_Step_swap_cond(
 }
 
 static void
-Hacl_Impl_Ed25519_Ladder_Step_loop_step_1(uint64_t *b, uint8_t *k1, uint32_t ctr, uint8_t i)
+Hacl_Impl_Ed25519_Ladder_Step_loop_step_1(uint64_t *b, uint8_t *k1 __attribute__((unused)), uint32_t ctr __attribute__((unused)), uint8_t i)
 {
   uint64_t *nq = b;
   uint64_t *nqpq = b + (uint32_t )20;
@@ -1195,7 +1195,7 @@ Hacl_Impl_Ed25519_Ladder_Step_loop_step_1(uint64_t *b, uint8_t *k1, uint32_t ctr
   Hacl_Impl_Ed25519_Ladder_Step_swap_cond_inplace(nq, nqpq, bit);
 }
 
-static void Hacl_Impl_Ed25519_Ladder_Step_loop_step_2(uint64_t *b, uint8_t *k1, uint32_t ctr)
+static void Hacl_Impl_Ed25519_Ladder_Step_loop_step_2(uint64_t *b, uint8_t *k1 __attribute__((unused)), uint32_t ctr __attribute__((unused)))
 {
   uint64_t *nq = b;
   uint64_t *nqpq = b + (uint32_t )20;
@@ -1214,7 +1214,7 @@ static void Hacl_Impl_Ed25519_Ladder_Step_loop_step_2(uint64_t *b, uint8_t *k1, 
 }
 
 static void
-Hacl_Impl_Ed25519_Ladder_Step_loop_step_3(uint64_t *b, uint8_t *k1, uint32_t ctr, uint8_t i)
+Hacl_Impl_Ed25519_Ladder_Step_loop_step_3(uint64_t *b, uint8_t *k1 __attribute__((unused)), uint32_t ctr __attribute__((unused)), uint8_t i)
 {
   uint64_t *nq = b;
   uint64_t *nqpq = b + (uint32_t )20;
@@ -1606,7 +1606,7 @@ static void Hacl_Impl_Ed25519_SecretToPublic_point_mul_g(uint64_t *result, uint8
 static void
 Hacl_Impl_Ed25519_SecretToPublic_secret_to_public_(
   uint8_t *out,
-  uint8_t *secret,
+  uint8_t *secret __attribute__((unused)),
   uint8_t *expanded_secret
 )
 {
@@ -2869,7 +2869,7 @@ static void
 Hacl_Impl_Ed25519_Sign_Steps_sign_step_1(
   uint8_t *secret,
   uint8_t *tmp_bytes,
-  uint64_t *tmp_ints
+  uint64_t *tmp_ints __attribute__((unused))
 )
 {
   uint8_t *a__ = tmp_bytes + (uint32_t )96;
@@ -2965,7 +2965,7 @@ Hacl_Impl_Ed25519_Sign_sign(uint8_t *signature, uint8_t *secret, uint8_t *msg, u
   Hacl_Impl_Ed25519_Sign_sign_(signature, secret, msg, len1);
 }
 
-void *Ed25519_op_String_Access(FStar_Monotonic_HyperStack_mem h, uint8_t *b)
+void *Ed25519_op_String_Access(FStar_Monotonic_HyperStack_mem h __attribute__((unused)), uint8_t *b __attribute__((unused)))
 {
   return (void *)(uint8_t )0;
 }
