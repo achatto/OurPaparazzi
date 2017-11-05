@@ -12,6 +12,7 @@
   <autoload name="telemetry" type="nps"/>
   <autoload name="telemetry" type="sim"/>
   <autoload name="haclc"/>
+  <autoload name="rng"/>
   <header>
     <file name="spprz_dl.h"/>
   </header>
