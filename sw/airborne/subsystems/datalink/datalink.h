@@ -91,7 +91,7 @@ static inline void DlCheckAndParse(struct link_device *dev, struct transport_tx 
     datalink_time = 0;
     datalink_nb_msgs++;
 #if USE_SECURE_COMMS
-    if !spprz_is_comm_status_ok() {
+    if (spprz_is_comm_status_ok() != true) {
       spprz_process_dl_msg(dev, trans, buf);
       *msg_available = false;
       return;

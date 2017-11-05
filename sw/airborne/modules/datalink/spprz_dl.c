@@ -47,6 +47,9 @@ bool spprz_is_comm_status_ok(void) {
 
 void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf) {
   // TODO: just a dummy for now
+  (void)dev;
+  (void)trans;
+  (void)buf;
 }
 
 // generate keys
