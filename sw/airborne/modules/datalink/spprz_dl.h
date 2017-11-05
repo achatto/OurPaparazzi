@@ -29,12 +29,6 @@
 #include "pprzlink/secure_pprz_transport.h"
 
 #include "mcu_periph/uart.h"
-#if USE_USB_SERIAL
-#include "mcu_periph/usb_serial.h"
-#endif
-#if USE_UDP
-#include "mcu_periph/udp.h"
-#endif
 
 /** PPRZ transport structure */
 extern struct spprz_transport spprz_tp;
@@ -44,6 +38,15 @@ extern void spprz_dl_init(void);
 
 /** Datalink Event */
 extern void spprz_dl_event(void);
+
+/** Check if the status is OK and we can
+ * process the messages */
+extern bool spprz_is_comm_status_ok(void);
+
+/** Process auxiliarry messages (such as key exchange)
+ * before the proper secure channel is established
+ */
+extern void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf);
 
 #endif /* SPPRZ_DL_H */
 

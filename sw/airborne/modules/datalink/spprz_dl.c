@@ -38,3 +38,16 @@ void spprz_dl_event(void)
   spprz_check_and_parse(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer, &dl_msg_available);
   DlCheckAndParse(&DOWNLINK_DEVICE.device, &spprz_tp.trans_tx, dl_buffer, &dl_msg_available);
 }
+
+bool spprz_is_comm_status_ok(void) {
+  // TODO: just a dummy for now
+  return true;
+}
+
+void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf) {
+  // TODO: just a dummy for now
+}
+
+// generate keys
+
+// setters/getters for spprz struct

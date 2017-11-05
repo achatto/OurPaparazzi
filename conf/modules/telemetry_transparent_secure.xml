@@ -19,6 +19,7 @@
   <init fun="spprz_dl_init()"/>
   <event fun="spprz_dl_event()"/>
   <makefile target="!fbw|sim|nps|hitl">
+    <define name="USE_SECURE_COMMS" value="1"/>
     <configure name="MODEM_PORT" case="upper|lower"/>
     <define name="USE_$(MODEM_PORT_UPPER)"/>
     <define name="$(MODEM_PORT_UPPER)_BAUD" value="$(MODEM_BAUD)"/>

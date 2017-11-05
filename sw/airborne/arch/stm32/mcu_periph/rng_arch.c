@@ -21,7 +21,7 @@
  */
 
 /** \file rng_arch.c
- *  \brief arch independent Random Number Generator API
+ *  \brief arch specific Random Number Generator API
  *
  */
 #include "mcu_periph/rng.h"
