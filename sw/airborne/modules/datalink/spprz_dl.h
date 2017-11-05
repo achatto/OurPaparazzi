@@ -30,6 +30,7 @@
 
 #include "mcu_periph/uart.h"
 
+
 /** PPRZ transport structure */
 extern struct spprz_transport spprz_tp;
 

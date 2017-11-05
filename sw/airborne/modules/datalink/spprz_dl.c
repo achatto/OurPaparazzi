@@ -25,6 +25,7 @@
 
 #include "modules/datalink/spprz_dl.h"
 #include "subsystems/datalink/datalink.h"
+#include "mcu_periph/rng.h"
 
 struct spprz_transport spprz_tp;
 
