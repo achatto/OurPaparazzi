@@ -34,5 +34,6 @@
 void rng_init(void);
 void rng_deinit(void);
 bool rng_get(uint32_t *rand_nr);
+uint32_t rng_wait_and_get(void);
 
 #endif /* MCU_PERIPH_RNG_H */

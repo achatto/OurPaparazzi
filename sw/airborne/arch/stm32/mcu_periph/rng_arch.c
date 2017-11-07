@@ -28,9 +28,13 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/rng.h>
 
+uint32_t last;
+
 void rng_init(void) {
   rcc_periph_clock_enable(RCC_RNG);
   rng_enable();
+  // dont forget to throw away the first generated number
+  last = rng_wait_and_get();
 }
 
 void rng_deinit(void) {
@@ -38,8 +42,27 @@ void rng_deinit(void) {
   rcc_periph_clock_disable(RCC_RNG);
 }
 
+// Return true only if we got a new number
+// that is different from the previous one
 bool rng_get(uint32_t *rand_nr) {
-  return rng_get_random(rand_nr);
+  uint32_t tmp = 0;
+  if (rng_get_random(&tmp) && (tmp != last)) {
+    last = tmp;
+    *rand_nr = tmp;
+    return true;
+  } else {
+    return false;
+  }
 }
 
-
+// Wait until we get a new number that is different
+// from the previous one. We can wait forever here if
+// the clocks are not setup properly.
+uint32_t rng_wait_and_get(void) {
+  uint32_t tmp = last;
+  while (tmp == last) {
+    tmp = rng_get_random_blocking();
+  }
+  last = tmp;
+  return tmp;
+}
