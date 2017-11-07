@@ -26,17 +26,56 @@
 #include "modules/datalink/spprz_dl.h"
 #include "subsystems/datalink/datalink.h"
 #include "mcu_periph/rng.h"
+#include "generated/keys_uav.h"
+
+
 
 struct spprz_transport spprz_tp;
+struct gec_sts_ctx sts;
+
 
 void spprz_dl_init(void)
 {
   spprz_transport_init(&spprz_tp);
+
+  // initialize keys
+  clear_ctx(&sts);
+
+  uint8_t theirPublicKey[PPRZ_KEY_LEN] = GCS_PUBLIC;
+  memcpy(&sts.theirPublicKey, theirPublicKey, PPRZ_KEY_LEN);
+
+  uint8_t myPublicKey[PPRZ_KEY_LEN] = UAV_PUBLIC;
+  memcpy(&sts.myPrivateKey.pub, myPublicKey, PPRZ_KEY_LEN);
+
+  uint8_t myPrivateKey[PPRZ_KEY_LEN] = UAV_PRIVATE;
+  memcpy(&sts.myPrivateKey.priv, myPrivateKey, PPRZ_KEY_LEN);
+
+  // generate ephemeral keys
+  for (uint8_t i = 0; i < (PPRZ_KEY_LEN / sizeof(uint32_t)); i++) {
+    uint32_t tmp = rng_wait_and_get();
+    // Q_BE
+    sts.myPrivateKey_ephemeral[i] = (uint8_t) tmp;
+    sts.myPrivateKey_ephemeral[i + 1] = (uint8_t) (tmp >> 8);
+    sts.myPrivateKey_ephemeral[i + 2] = (uint8_t) (tmp >> 16);
+    sts.myPrivateKey_ephemeral[i + 3] = (uint8_t) (tmp >> 24);
+
+    // P_BE
+    tmp = rng_wait_and_get();
+    sts.myPublicKey_ephemeral[i] = (uint8_t) tmp;
+    sts.myPublicKey_ephemeral[i + 1] = (uint8_t) (tmp >> 8);
+    sts.myPublicKey_ephemeral[i + 2] = (uint8_t) (tmp >> 16);
+    sts.myPublicKey_ephemeral[i + 3] = (uint8_t) (tmp >> 24);
+  }
 }
 
 void spprz_dl_event(void)
 {
   spprz_check_and_parse(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer, &dl_msg_available);
+  if (dl_msg_available && (sts->protocol_stage != MESSAGE_2_DONE)) {
+    // process the unencrypted message
+    spprz_process_dl_msg(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer);
+    dl_msg_available = false;
+  }
   DlCheckAndParse(&DOWNLINK_DEVICE.device, &spprz_tp.trans_tx, dl_buffer, &dl_msg_available);
 }
 
@@ -52,6 +91,25 @@ void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, u
   (void)buf;
 }
 
-// generate keys
 
-// setters/getters for spprz struct
+void clear_ctx(gec_sts_ctx * ctx)
+{
+  memset(&ctx->theirPublicKey, 0, sizeof(gec_pubkey));
+  memset(&ctx->myPrivateKey, 0, sizeof(gec_privkey));
+  memset(&ctx->myPrivateKey_ephemeral, 0, PPRZ_KEY_LEN);
+  memset(&ctx->theirPublicKey_ephemeral, 0, PPRZ_KEY_LEN);
+  memset(ctx->client_key_material, 0, PPRZ_KEY_MATERIAL_LEN);
+  ctx->protocol_stage = INVALID_STAGE;
+  ctx->party = INVALID_PARTY;
+}
+
+void reset_ctx(gec_sts_ctx * ctx)
+{
+  memset(&ctx->theirPublicKey, 0, sizeof(gec_pubkey));
+  memset(&ctx->myPrivateKey, 0, sizeof(gec_privkey));
+  memset(&ctx->myPrivateKey_ephemeral, 0, PPRZ_KEY_LEN);
+  memset(&ctx->theirPublicKey_ephemeral, 0, PPRZ_KEY_LEN);
+  memset(ctx->client_key_material, 0, PPRZ_KEY_MATERIAL_LEN);
+  ctx->protocol_stage = READY_STAGE;
+  ctx->party = INVALID_PARTY;
+}

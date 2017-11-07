@@ -30,6 +30,63 @@
 
 #include "mcu_periph/uart.h"
 
+typedef unsigned char ed25519_signature[64];
+typedef unsigned char ed25519_public_key[32];
+typedef unsigned char ed25519_secret_key[32];
+
+struct gec_privkey {
+    ed25519_secret_key priv;
+    ed25519_public_key pub;
+};
+
+struct gec_pubkey {
+    ed25519_public_key pub;
+};
+
+typedef enum {
+    INVALID_STAGE,
+    READY_STAGE,                // Indicates the context is ready for use.
+                                //  - Set after init_context.
+                                //  - Set after constructing message 3 (party A, response_ack_sts()).
+                                //  - Set after receiving a valid message 3 (party B, finish_sts()).
+                                //  - Set after reset_partner
+    MESSAGE_1_DONE,             // Indicates context ready to receive message 2.
+                                //  - Set after constructing message 1 (party A, initiate_sts())
+    MESSAGE_2_DONE              // Indicates context if ready to receive message 3
+                                //  - Set after constructing message 2 (party B, respond_sts())
+} stage_t;
+
+typedef enum {
+    INITIATOR, RESPONDER, CLIENT, INVALID_PARTY
+} party_t;
+
+struct gec_sym_key {
+    uint8_t  key[PPRZ_KEY_LEN];
+    uint8_t  nonce[PPRZ_NONCE_LEN];
+    uint32_t ctr;
+};
+
+// Intermediate data structure containing information relating to the stage of
+// the STS protocol.
+struct gec_sts_ctx {
+    struct gec_pubkey theirPublicKey;
+    struct gec_privkey myPrivateKey;
+    uint8_t myPublicKey_ephemeral[PPRZ_KEY_LEN];
+    uint8_t myPrivateKey_ephemeral[PPRZ_KEY_LEN];
+    uint8_t theirPublicKey_ephemeral[PPRZ_KEY_LEN];
+    uint8_t client_key_material[PPRZ_KEY_MATERIAL_LEN];
+    stage_t protocol_stage;
+    party_t party;
+};
+
+
+// Zero the protocol stage.  This is like reset_patner(), but the current
+// parnter public key is retained.
+void reset_ctx(gec_sts_ctx_t * ctx);
+
+// Zero all fields, including the long term public and private keys.
+void clear_ctx(gec_sts_ctx_t * ctx);
+
 
 /** PPRZ transport structure */
 extern struct spprz_transport spprz_tp;
