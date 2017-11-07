@@ -35,9 +35,6 @@
 
 #include "std.h"
 #include "pprzlink/dl_protocol.h"
-#if USE_SECURE_COMMS
-#include "modules/datalink/spprz_dl.h"
-#endif
 
 /** Datalink kinds */
 #define PPRZ 1
@@ -90,13 +87,6 @@ static inline void DlCheckAndParse(struct link_device *dev, struct transport_tx 
   if (*msg_available) {
     datalink_time = 0;
     datalink_nb_msgs++;
-#if USE_SECURE_COMMS
-    if (spprz_is_comm_status_ok() != true) {
-      spprz_process_dl_msg(dev, trans, buf);
-      *msg_available = false;
-      return;
-    }
-#endif
     dl_parse_msg(dev, trans, buf);
     *msg_available = false;
   }
