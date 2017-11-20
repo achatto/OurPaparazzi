@@ -70,21 +70,26 @@ void spprz_dl_init(void)
 
 void spprz_dl_event(void)
 {
+  // check and parse incoming data
   spprz_check_and_parse(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer, &dl_msg_available);
-  if (dl_msg_available && (sts->protocol_stage != MESSAGE_2_DONE)) {
+
+  if (dl_msg_available && (sts->protocol_stage != CRYPTO_OK)) {
     // process the unencrypted message
-    spprz_process_dl_msg(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer);
+    spprz_process_sts_msg(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer);
     dl_msg_available = false;
   }
   DlCheckAndParse(&DOWNLINK_DEVICE.device, &spprz_tp.trans_tx, dl_buffer, &dl_msg_available);
 }
 
 bool spprz_is_comm_status_ok(void) {
-  // TODO: just a dummy for now
-  return true;
+  if (sts.protocol_stage == CRYPTO_OK) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
-void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf) {
+void spprz_process_sts_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf) {
   // TODO: just a dummy for now
   (void)dev;
   (void)trans;
@@ -92,24 +97,24 @@ void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, u
 }
 
 
-void clear_ctx(gec_sts_ctx * ctx)
+void clear_ctx(struct gec_sts_ctx * ctx)
 {
-  memset(&ctx->theirPublicKey, 0, sizeof(gec_pubkey));
-  memset(&ctx->myPrivateKey, 0, sizeof(gec_privkey));
+  memset(&ctx->theirPublicKey, 0, sizeof(struct gec_pubkey));
+  memset(&ctx->myPrivateKey, 0, sizeof(struct gec_privkey));
   memset(&ctx->myPrivateKey_ephemeral, 0, PPRZ_KEY_LEN);
   memset(&ctx->theirPublicKey_ephemeral, 0, PPRZ_KEY_LEN);
   memset(ctx->client_key_material, 0, PPRZ_KEY_MATERIAL_LEN);
-  ctx->protocol_stage = INVALID_STAGE;
-  ctx->party = INVALID_PARTY;
+  ctx->protocol_stage = WAIT_MSG1;
+  ctx->party = RESPONDER;
 }
 
-void reset_ctx(gec_sts_ctx * ctx)
+void reset_ctx(struct gec_sts_ctx * ctx)
 {
-  memset(&ctx->theirPublicKey, 0, sizeof(gec_pubkey));
-  memset(&ctx->myPrivateKey, 0, sizeof(gec_privkey));
+  memset(&ctx->theirPublicKey, 0, sizeof(struct gec_pubkey));
+  memset(&ctx->myPrivateKey, 0, sizeof(struct gec_privkey));
   memset(&ctx->myPrivateKey_ephemeral, 0, PPRZ_KEY_LEN);
   memset(&ctx->theirPublicKey_ephemeral, 0, PPRZ_KEY_LEN);
   memset(ctx->client_key_material, 0, PPRZ_KEY_MATERIAL_LEN);
-  ctx->protocol_stage = READY_STAGE;
-  ctx->party = INVALID_PARTY;
+  ctx->protocol_stage = WAIT_MSG1;
+  ctx->party = RESPONDER;
 }

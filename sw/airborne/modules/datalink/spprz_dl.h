@@ -44,16 +44,11 @@ struct gec_pubkey {
 };
 
 typedef enum {
-    INVALID_STAGE,
-    READY_STAGE,                // Indicates the context is ready for use.
-                                //  - Set after init_context.
-                                //  - Set after constructing message 3 (party A, response_ack_sts()).
-                                //  - Set after receiving a valid message 3 (party B, finish_sts()).
-                                //  - Set after reset_partner
-    MESSAGE_1_DONE,             // Indicates context ready to receive message 2.
-                                //  - Set after constructing message 1 (party A, initiate_sts())
-    MESSAGE_2_DONE              // Indicates context if ready to receive message 3
-                                //  - Set after constructing message 2 (party B, respond_sts())
+  INIT,
+  WAIT_MSG1,
+  WAIT_MSG2,
+  WAIT_MSG3,
+  CRYPTO_OK,
 } stage_t;
 
 typedef enum {
@@ -82,10 +77,10 @@ struct gec_sts_ctx {
 
 // Zero the protocol stage.  This is like reset_patner(), but the current
 // parnter public key is retained.
-void reset_ctx(gec_sts_ctx_t * ctx);
+void reset_ctx(struct gec_sts_ctx_t * ctx);
 
 // Zero all fields, including the long term public and private keys.
-void clear_ctx(gec_sts_ctx_t * ctx);
+void clear_ctx(struct gec_sts_ctx_t * ctx);
 
 
 /** PPRZ transport structure */
@@ -104,7 +99,7 @@ extern bool spprz_is_comm_status_ok(void);
 /** Process auxiliarry messages (such as key exchange)
  * before the proper secure channel is established
  */
-extern void spprz_process_dl_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf);
+extern void spprz_process_sts_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf);
 
 #endif /* SPPRZ_DL_H */
 
