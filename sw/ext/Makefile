@@ -75,7 +75,8 @@ hacl-star.build:
 		cd $(PAPARAZZI_SRC) && git submodule update --init sw/ext/hacl-star; \
 	fi
 	$(Q)$(MAKE) -C hacl-star/snapshots/hacl-c clean
-	cp hacl-star/snapshots/hacl-c/* $(PAPARAZZI_SRC)/sw/airborne/modules/datalink/hacl-c/.
+	# keep the current snapshot for now
+	#cp hacl-star/snapshots/hacl-c/* $(PAPARAZZI_SRC)/sw/airborne/modules/datalink/hacl-c/.
 	$(Q)$(MAKE) -C hacl-star/snapshots/hacl-c libhacl.a
 	sudo cp hacl-star/snapshots/hacl-c/libhacl.a /usr/local/lib/.
 
