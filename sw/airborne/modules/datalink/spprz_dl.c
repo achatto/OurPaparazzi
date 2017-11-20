@@ -28,7 +28,7 @@
 #include "mcu_periph/rng.h"
 #include "generated/keys_uav.h"
 
-
+#include <string.h> // for memcpy
 
 struct spprz_transport spprz_tp;
 struct gec_sts_ctx sts;
@@ -73,7 +73,7 @@ void spprz_dl_event(void)
   // check and parse incoming data
   spprz_check_and_parse(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer, &dl_msg_available);
 
-  if (dl_msg_available && (sts->protocol_stage != CRYPTO_OK)) {
+  if (dl_msg_available && (sts.protocol_stage != CRYPTO_OK)) {
     // process the unencrypted message
     spprz_process_sts_msg(&DOWNLINK_DEVICE.device, &spprz_tp, dl_buffer);
     dl_msg_available = false;
@@ -89,7 +89,7 @@ bool spprz_is_comm_status_ok(void) {
   }
 }
 
-void spprz_process_sts_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf) {
+void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf) {
   // TODO: just a dummy for now
   (void)dev;
   (void)trans;

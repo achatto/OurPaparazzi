@@ -175,6 +175,12 @@ ext:
 opencv_bebop:
 	$(MAKE) -C $(EXT) opencv_bebop
 
+
+hacl-star:
+	$(MAKE) -C $(EXT) hacl-star
+
+
+
 #
 # make misc subdirs
 #

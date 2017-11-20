@@ -12,13 +12,15 @@
     <file name="kremlib.c"/>
     <file name="Hacl_Policies.c"/>
     <file name="AEAD_Poly1305_64.c"/>
-    <file name="Chacha20.c"/>
-    <file name="Curve25519.c"/>
+    <file name="Hacl_Chacha20.c"/>
+    <file name="Hacl_Curve25519.c"/>
     <file name="Ed25519.c"/>
-    <file name="SHA2_512.c"/>
+    <file name="Hacl_SHA2_512.c"/>
     <raw>
       # to not use 128 bit arithmetic
       ap.CFLAGS += -DKRML_NOUINT128
+      # provide custom printf and exit functions
+      ap.CFLAGS += -DKRML_HOST_PRINTF=dummyprintf -DKRML_HOST_EXIT=while
       # generate asymmetric keys
       GENERATE_KEYS = 1
       # turn off parenthese warnings

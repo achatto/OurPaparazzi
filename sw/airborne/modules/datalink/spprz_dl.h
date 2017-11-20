@@ -77,10 +77,10 @@ struct gec_sts_ctx {
 
 // Zero the protocol stage.  This is like reset_patner(), but the current
 // parnter public key is retained.
-void reset_ctx(struct gec_sts_ctx_t * ctx);
+void reset_ctx(struct gec_sts_ctx * ctx);
 
 // Zero all fields, including the long term public and private keys.
-void clear_ctx(struct gec_sts_ctx_t * ctx);
+void clear_ctx(struct gec_sts_ctx * ctx);
 
 
 /** PPRZ transport structure */
@@ -99,7 +99,7 @@ extern bool spprz_is_comm_status_ok(void);
 /** Process auxiliarry messages (such as key exchange)
  * before the proper secure channel is established
  */
-extern void spprz_process_sts_msg(struct link_device *dev, struct transport_tx *trans, uint8_t *buf);
+extern void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf);
 
 #endif /* SPPRZ_DL_H */
 

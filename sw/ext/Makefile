@@ -65,7 +65,19 @@ luftboot: libopencm3.update luftboot.update luftboot.build
 luftboot_flash: luftboot.build
 	$(Q)$(MAKE) -C luftboot/src flash BMP_PORT?=/dev/ttyACM0 LIBOPENCM3=../../libopencm3 PREFIX=$(PREFIX)
 
+
 chibios: chibios.update
+
+hacl-star: hacl-star.build
+
+hacl-star.build:
+	$(Q)if [ -d $(PAPARAZZI_SRC)/.git ]; then \
+		cd $(PAPARAZZI_SRC) && git submodule update --init sw/ext/hacl-star; \
+	fi
+	$(Q)$(MAKE) -C hacl-star/snapshots/hacl-c clean
+	cp hacl-star/snapshots/hacl-c/* $(PAPARAZZI_SRC)/sw/airborne/modules/datalink/hacl-c/.
+	$(Q)$(MAKE) -C hacl-star/snapshots/hacl-c libhacl.a
+	sudo cp hacl-star/snapshots/hacl-c/libhacl.a /usr/local/lib/.
 
 TRICAL: TRICAL.update
 
