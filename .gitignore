@@ -185,6 +185,9 @@ paparazzi.sublime-workspace
 
 /sw/airborne/test/ahrs/run_ahrs_on_synth
 
+# HACL module
+/sw/airborne/modules/datalink/hacl-c
+
 # Mac OS X
 .DS_Store
 
