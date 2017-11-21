@@ -31,16 +31,14 @@
 #include "mcu_periph/uart.h"
 
 typedef unsigned char ed25519_signature[64];
-typedef unsigned char ed25519_public_key[32];
-typedef unsigned char ed25519_secret_key[32];
 
 struct gec_privkey {
-    ed25519_secret_key priv;
-    ed25519_public_key pub;
+    uint8_t priv[PPRZ_KEY_LEN];;
+    uint8_t pub[PPRZ_KEY_LEN];;
 };
 
 struct gec_pubkey {
-    ed25519_public_key pub;
+    uint8_t pub[PPRZ_KEY_LEN];;
 };
 
 typedef enum {
@@ -55,6 +53,25 @@ typedef enum {
     INITIATOR, RESPONDER, CLIENT, INVALID_PARTY
 } party_t;
 
+typedef enum {
+  P_AE, P_BE, SIG,
+} gec_sts_msg_type_t;
+
+typedef enum {
+  ERROR_NONE,
+  // RESPONDER ERRORS
+  MSG1_TIMEOUT_ERROR,
+  MSG1_ENCRYPT_ERROR,
+  MSG3_TIMEOUT_ERROR,
+  MSG3_DECRYPT_ERROR,
+  MSG3_SIGNVERIFY_ERROR,
+  // INITIATOR ERRORS
+  MSG2_TIMEOUT_ERROR,
+  MSG2_DECRYPT_ERROR,
+  MSG2_SIGNVERIFY_ERROR,
+  MSG3_ENCRYPT_ERROR
+} sts_error_t;
+
 struct gec_sym_key {
     uint8_t  key[PPRZ_KEY_LEN];
     uint8_t  nonce[PPRZ_NONCE_LEN];
@@ -66,22 +83,18 @@ struct gec_sym_key {
 struct gec_sts_ctx {
     struct gec_pubkey theirPublicKey;
     struct gec_privkey myPrivateKey;
-    uint8_t myPublicKey_ephemeral[PPRZ_KEY_LEN];
-    uint8_t myPrivateKey_ephemeral[PPRZ_KEY_LEN];
-    uint8_t theirPublicKey_ephemeral[PPRZ_KEY_LEN];
-    uint8_t client_key_material[PPRZ_KEY_MATERIAL_LEN];
+    struct gec_pubkey theirPublicKeyEphemeral;
+    struct gec_privkey myPrivateKeyEphemeral;
+    struct gec_sym_key theirSymmetricKey;
+    struct gec_sym_key mySymmetricKey;
     stage_t protocol_stage;
     party_t party;
+    sts_error_t last_error;
 };
 
 
-// Zero the protocol stage.  This is like reset_patner(), but the current
-// parnter public key is retained.
-void reset_ctx(struct gec_sts_ctx * ctx);
-
-// Zero all fields, including the long term public and private keys.
+// Zero all fields, excluding the long term public and private keys.
 void clear_ctx(struct gec_sts_ctx * ctx);
-
 
 /** PPRZ transport structure */
 extern struct spprz_transport spprz_tp;
@@ -92,14 +105,16 @@ extern void spprz_dl_init(void);
 /** Datalink Event */
 extern void spprz_dl_event(void);
 
-/** Check if the status is OK and we can
- * process the messages */
-extern bool spprz_is_comm_status_ok(void);
-
 /** Process auxiliarry messages (such as key exchange)
  * before the proper secure channel is established
  */
-extern void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf);
+void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf);
+
+void respond_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf);
+
+void finish_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf);
+
+void generate_ephemeral_keys(struct gec_privkey *sk);
 
 #endif /* SPPRZ_DL_H */
 
