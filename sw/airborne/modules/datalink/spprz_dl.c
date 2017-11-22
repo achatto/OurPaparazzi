@@ -29,7 +29,10 @@
 #include "generated/keys_uav.h"
 #include "datalink/hacl-c/Ed25519.h"
 #include "datalink/hacl-c/Curve25519.h"
-#include "datalink/hacl-c/SHA_512.h"
+#include "datalink/hacl-c/SHA2_512.h"
+#include "datalink/hacl-c/Chacha20Poly1305.h"
+
+#include "subsystems/datalink/telemetry.h"
 
 #include <string.h> // for memcpy
 
@@ -95,6 +98,25 @@ void derive_key_material(struct gec_sts_ctx *ctx, uint8_t* z) {
 
 }
 
+/*
+int verify(gec_sts_ctx_t *ctx, const uint8_t msg[AUTH_DATA_LEN]) {
+
+}
+*/
+
+
+uint32_t gec_encrypt(struct gec_sym_key *k, uint8_t *ciphertext, uint8_t *plaintext, size_t len, uint8_t *mac) {
+  // encrypt
+  uint32_t res = Chacha20Poly1305_aead_encrypt(ciphertext,  // ciphertext
+                                               mac,  // mac
+                                               plaintext,  // plaintext
+                                               len,  // plaintext len
+                                               NULL,  // aad
+                                               0,  // aad len
+                                               k->key,  // key
+                                               k->nonce);  // nonce
+  return res;
+}
 
 /**
  * 2. B generates ephemeral curve25519 key pair (Pbe, Qbe).
@@ -113,18 +135,42 @@ void respond_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t
 
   // 3. B computes the shared secret: z = scalar_multiplication(Qbe, Pae)
   uint8_t z[32] = {0};
-  Curve25519_crypto_scalarmult(z, &sts.myPrivateKeyEphemeral.priv, &sts.theirPublicKeyEphemeral.pub);
+  Curve25519_crypto_scalarmult(z, sts.myPrivateKeyEphemeral.priv, sts.theirPublicKeyEphemeral.pub);
 
   // 4. B uses the key derivation function kdf(z,1) to compute Kb || Sb,
   // kdf(z,0) to compute Ka || Sa, and kdf(z,2) to compute Kclient || Sclient.
-  derive_key_material(&sts);
+  derive_key_material(&sts, z);
 
   // 5. B computes the ed25519 signature: sig = signQb(Pbe || Pae)
+  uint8_t sig[PPRZ_SIGN_LEN] = {0};
+  uint8_t pbe_concat_p_ae[PPRZ_KEY_LEN*2] = {0};
+  memcpy(pbe_concat_p_ae, &sts.myPrivateKeyEphemeral.pub, PPRZ_KEY_LEN);
+  memcpy(&pbe_concat_p_ae[PPRZ_KEY_LEN], &sts.theirPublicKeyEphemeral.pub, PPRZ_KEY_LEN);
+  Ed25519_sign(sig, sts.myPrivateKey.priv, pbe_concat_p_ae, PPRZ_KEY_LEN*2);
+
+  // 6. B computes and sends the message Pbe || Ekey=Kb,IV=Sb||zero(sig)
+  uint8_t msg_data[PPRZ_KEY_LEN + PPRZ_SIGN_LEN + PPRZ_MAC_LEN] = {0};
+  memcpy(msg_data, &sts.myPrivateKeyEphemeral.pub, PPRZ_KEY_LEN);
+  if (gec_encrypt(&sts.mySymmetricKey, &msg_data[PPRZ_KEY_LEN], sig, PPRZ_SIGN_LEN, &msg_data[PPRZ_KEY_LEN + PPRZ_SIGN_LEN])) {
+    // log error here and return
+    return;
+  }
+  // all good, send message and increment status
+  uint8_t msg_type = P_BE;
+  uint8_t nb_msg_data = PPRZ_KEY_LEN + PPRZ_SIGN_LEN + PPRZ_MAC_LEN;
+  pprz_msg_send_KEY_EXCHANGE_UAV(&trans->trans_tx, dev, AC_ID, &msg_type, nb_msg_data, msg_data);  // enqueue message
+  spprz_send_plaintext(dev, trans);  // send plaintext
+
+  // update protocol stage
+  sts.protocol_stage = WAIT_MSG3;
+  // TODO: add timeout
 }
 
 
 void finish_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf){
-
+  (void)dev;
+  (void)trans;
+  (void)buf;
 }
 
 void spprz_dl_event(void)
@@ -147,6 +193,7 @@ void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *tran
 
   if (sender_id != 0) {
     // process only messages from GCS
+    // log an error
     return;
   }
 
@@ -158,11 +205,15 @@ void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *tran
         case WAIT_MSG1:
           if (msg_type == P_AE) {
             respond_sts(dev, trans, buf);
+          } else {
+            // log an error
           }
           break;
         case WAIT_MSG3:
           if (msg_type == SIG) {
             finish_sts(dev, trans, buf);
+          } else {
+            // log an error
           }
           break;
         default:
@@ -173,6 +224,7 @@ void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *tran
       break;
     default:
       // process only KEY_EXCHANGE for now
+      // log an error
       break;
   }
 }

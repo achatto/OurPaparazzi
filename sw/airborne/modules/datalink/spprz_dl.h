@@ -30,6 +30,8 @@
 
 #include "mcu_periph/uart.h"
 
+#define PPRZ_SIGN_LEN 64
+
 typedef unsigned char ed25519_signature[64];
 
 struct gec_privkey {
@@ -39,6 +41,12 @@ struct gec_privkey {
 
 struct gec_pubkey {
     uint8_t pub[PPRZ_KEY_LEN];;
+};
+
+struct gec_sym_key {
+    uint8_t  key[PPRZ_KEY_LEN];
+    uint8_t  nonce[PPRZ_NONCE_LEN];
+    uint32_t ctr;
 };
 
 typedef enum {
@@ -71,12 +79,6 @@ typedef enum {
   MSG2_SIGNVERIFY_ERROR,
   MSG3_ENCRYPT_ERROR
 } sts_error_t;
-
-struct gec_sym_key {
-    uint8_t  key[PPRZ_KEY_LEN];
-    uint8_t  nonce[PPRZ_NONCE_LEN];
-    uint32_t ctr;
-};
 
 // Intermediate data structure containing information relating to the stage of
 // the STS protocol.
@@ -115,6 +117,10 @@ void respond_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t
 void finish_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf);
 
 void generate_ephemeral_keys(struct gec_privkey *sk);
+
+void derive_key_material(struct gec_sts_ctx *ctx, uint8_t* z);
+
+uint32_t gec_encrypt(struct gec_sym_key *k, uint8_t *ciphertext, uint8_t *plaintext, size_t len, uint8_t *mac);
 
 #endif /* SPPRZ_DL_H */
 

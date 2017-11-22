@@ -29,7 +29,7 @@ typedef FStar_UInt128_t Hacl_Bignum_Wide_t;
 
 typedef uint64_t Hacl_Bignum_Limb_t;
 
-extern void Hacl_Bignum_lemma_diff(Prims_int x0, Prims_int x1, Prims_pos x2);
+//extern void Hacl_Bignum_lemma_diff(Prims_int x0, Prims_int x1, Prims_pos x2);
 
 typedef uint64_t *Hacl_EC_Point_point;
 
