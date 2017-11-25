@@ -39,6 +39,19 @@
 struct spprz_transport spprz_tp;
 struct gec_sts_ctx sts;
 
+#if PERIODIC_TELEMETRY
+#include "subsystems/datalink/telemetry.h"
+
+static void send_spprz_info(struct transport_tx *trans, struct link_device *dev)
+{
+  pprz_msg_send_SPRRZ_STATUS(trans, dev, AC_ID,
+      &sts.protocol_stage,
+      &sts.last_error);
+
+}
+
+#endif
+
 
 void spprz_dl_init(void)
 {
@@ -55,6 +68,10 @@ void spprz_dl_init(void)
 
   uint8_t myPrivateKey[PPRZ_KEY_LEN] = UAV_PRIVATE;
   memcpy(&sts.myPrivateKey.priv, myPrivateKey, PPRZ_KEY_LEN);
+
+#if PERIODIC_TELEMETRY
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_SPRRZ_STATUS, send_spprz_info);
+#endif
 }
 
 
@@ -98,15 +115,26 @@ void derive_key_material(struct gec_sts_ctx *ctx, uint8_t* z) {
 
 }
 
-/*
-int verify(gec_sts_ctx_t *ctx, const uint8_t msg[AUTH_DATA_LEN]) {
 
+/**
+ * Decrypt a message, no AAD for now
+ */
+uint32_t gec_decrypt(struct gec_sym_key *k, uint8_t *plaintext, uint8_t *ciphertext, size_t len, uint8_t *mac){
+  uint32_t res = Chacha20Poly1305_aead_decrypt(plaintext,
+                                               ciphertext,
+                                               len,
+                                               mac,
+                                               NULL,
+                                               0,
+                                               k->key,
+                                               k->nonce);
+  return res;
 }
-*/
 
-
+/**
+ * Encrypt a message, no AAD for now
+ */
 uint32_t gec_encrypt(struct gec_sym_key *k, uint8_t *ciphertext, uint8_t *plaintext, size_t len, uint8_t *mac) {
-  // encrypt
   uint32_t res = Chacha20Poly1305_aead_encrypt(ciphertext,  // ciphertext
                                                mac,  // mac
                                                plaintext,  // plaintext
@@ -119,14 +147,19 @@ uint32_t gec_encrypt(struct gec_sym_key *k, uint8_t *ciphertext, uint8_t *plaint
 }
 
 /**
+ * message1 = [ Pae (32 bytes) ]
  * 2. B generates ephemeral curve25519 key pair (Pbe, Qbe).
  * 3. B computes the shared secret: z = scalar_multiplication(Qbe, Pae)
  * 4. B uses the key derivation function kdf(z,1) to compute Kb || Sb,
  * kdf(z,0) to compute Ka || Sa, and kdf(z,2) to compute Kclient || Sclient.
  * 5. B computes the ed25519 signature: sig = signQb(Pbe || Pae)
  * 6. B computes and sends the message Pbe || Ekey=Kb,IV=Sb||zero(sig)
+ *
+ * Sends: message2 = [ Pbe (32 bytes) | Encrypted Signature (64 bytes) ] + MAC (16bytes)
  */
 void respond_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf) {
+  // TODO: check message length
+
   // copy P_ae over
   memcpy(&sts.theirPublicKeyEphemeral.pub, DL_KEY_EXCHANGE_GCS_msg_data(buf), sizeof(struct gec_pubkey));
 
@@ -153,6 +186,7 @@ void respond_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t
   memcpy(msg_data, &sts.myPrivateKeyEphemeral.pub, PPRZ_KEY_LEN);
   if (gec_encrypt(&sts.mySymmetricKey, &msg_data[PPRZ_KEY_LEN], sig, PPRZ_SIGN_LEN, &msg_data[PPRZ_KEY_LEN + PPRZ_SIGN_LEN])) {
     // log error here and return
+    sts.last_error = MSG1_ENCRYPT_ERROR;
     return;
   }
   // all good, send message and increment status
@@ -166,11 +200,40 @@ void respond_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t
   // TODO: add timeout
 }
 
+/**
+ * Finalize STS exchange
+ *
+ * message3 = [ Encrypted Signature (64 bytes) ] + MAC(16 bytes) = Ekey=Ka,IV=Sa||zero(sig)
+ * where sig = signQa(Pae || Pbe)
+ * 13. B decrypts the message and verifies the signature.
+ */
+void finish_sts(struct link_device *dev __attribute__((__unused__)),
+                struct spprz_transport *trans __attribute__((__unused__)),
+                uint8_t *buf){
+  // TODO: check message length
 
-void finish_sts(struct link_device *dev, struct spprz_transport *trans, uint8_t *buf){
-  (void)dev;
-  (void)trans;
-  (void)buf;
+  // decrypt
+  uint8_t sign[PPRZ_SIGN_LEN] = {0};
+  if (gec_decrypt(&sts.theirSymmetricKey, sign, DL_KEY_EXCHANGE_GCS_msg_data(buf),
+      PPRZ_SIGN_LEN, DL_KEY_EXCHANGE_GCS_msg_data(buf)+PPRZ_SIGN_LEN)) {
+    // log error and return
+    // MSG3 decrypt error
+    sts.last_error = MSG3_DECRYPT_ERROR;
+    return;
+  }
+
+  // verify
+  uint8_t pbe_concat_p_ae[PPRZ_KEY_LEN*2] = {0};
+  memcpy(pbe_concat_p_ae, &sts.myPrivateKeyEphemeral.pub, PPRZ_KEY_LEN);
+  memcpy(&pbe_concat_p_ae[PPRZ_KEY_LEN], &sts.theirPublicKeyEphemeral.pub, PPRZ_KEY_LEN);
+  if (!Ed25519_verify(sts.theirPublicKeyEphemeral.pub, pbe_concat_p_ae, PPRZ_SIGN_LEN, sign)) {
+    // log error and return
+    // MSG3 sign verify error
+    sts.last_error = MSG3_SIGNVERIFY_ERROR;
+  }
+
+  // if everything went OK, proceed to CRYPTO_OK status
+  sts.protocol_stage = CRYPTO_OK;
 }
 
 void spprz_dl_event(void)
@@ -207,6 +270,7 @@ void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *tran
             respond_sts(dev, trans, buf);
           } else {
             // log an error
+            sts.last_error = UNEXPECTED_MSG_TYPE_ERROR;
           }
           break;
         case WAIT_MSG3:
@@ -214,17 +278,20 @@ void spprz_process_sts_msg(struct link_device *dev, struct spprz_transport *tran
             finish_sts(dev, trans, buf);
           } else {
             // log an error
+            sts.last_error = UNEXPECTED_MSG_TYPE_ERROR;
           }
           break;
         default:
           // INIT, WAIT_MSG2, CRYPTO_OK
-          // do nothing
+          // do nothing or log an error
+          sts.last_error = UNEXPECTED_STS_STAGE_ERROR;
           break;
       }
       break;
     default:
       // process only KEY_EXCHANGE for now
       // log an error
+      sts.last_error = UNEXPECTED_MSG_ERROR;
       break;
   }
 }

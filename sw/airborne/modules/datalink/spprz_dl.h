@@ -77,7 +77,11 @@ typedef enum {
   MSG2_TIMEOUT_ERROR,
   MSG2_DECRYPT_ERROR,
   MSG2_SIGNVERIFY_ERROR,
-  MSG3_ENCRYPT_ERROR
+  MSG3_ENCRYPT_ERROR,
+  // BOTH PARTIES
+  UNEXPECTED_MSG_TYPE_ERROR,
+  UNEXPECTED_STS_STAGE_ERROR,
+  UNEXPECTED_MSG_ERROR
 } sts_error_t;
 
 // Intermediate data structure containing information relating to the stage of
@@ -121,6 +125,7 @@ void generate_ephemeral_keys(struct gec_privkey *sk);
 void derive_key_material(struct gec_sts_ctx *ctx, uint8_t* z);
 
 uint32_t gec_encrypt(struct gec_sym_key *k, uint8_t *ciphertext, uint8_t *plaintext, size_t len, uint8_t *mac);
+uint32_t gec_decrypt(struct gec_sym_key *k, uint8_t *plaintext, uint8_t *ciphertext, size_t len, uint8_t *mac);
 
 #endif /* SPPRZ_DL_H */
 
