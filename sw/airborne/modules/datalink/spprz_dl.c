@@ -44,9 +44,12 @@ struct gec_sts_ctx sts;
 
 static void send_spprz_info(struct transport_tx *trans, struct link_device *dev)
 {
-  pprz_msg_send_SPRRZ_STATUS(trans, dev, AC_ID,
+  pprz_msg_send_SPPRZ_STATUS(trans, dev, AC_ID,
       &sts.protocol_stage,
-      &sts.last_error);
+      &sts.last_error,
+      &spprz_tp.counter_err,
+      &spprz_tp.decrypt_err,
+      &spprz_tp.encrypt_err);
 
 }
 
@@ -70,7 +73,7 @@ void spprz_dl_init(void)
   memcpy(&sts.myPrivateKey.priv, myPrivateKey, PPRZ_KEY_LEN);
 
 #if PERIODIC_TELEMETRY
-  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_SPRRZ_STATUS, send_spprz_info);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_SPPRZ_STATUS, send_spprz_info);
 #endif
 }
 
@@ -118,6 +121,7 @@ void derive_key_material(struct gec_sts_ctx *ctx, uint8_t* z) {
 
 /**
  * Decrypt a message, no AAD for now
+ * if res == 0 everything OK
  */
 uint32_t gec_decrypt(struct gec_sym_key *k, uint8_t *plaintext, uint8_t *ciphertext, size_t len, uint8_t *mac){
   uint32_t res = Chacha20Poly1305_aead_decrypt(plaintext,
@@ -133,6 +137,7 @@ uint32_t gec_decrypt(struct gec_sym_key *k, uint8_t *plaintext, uint8_t *ciphert
 
 /**
  * Encrypt a message, no AAD for now
+ * if res == 0 everything OK
  */
 uint32_t gec_encrypt(struct gec_sym_key *k, uint8_t *ciphertext, uint8_t *plaintext, size_t len, uint8_t *mac) {
   uint32_t res = Chacha20Poly1305_aead_encrypt(ciphertext,  // ciphertext
@@ -226,14 +231,28 @@ void finish_sts(struct link_device *dev __attribute__((__unused__)),
   uint8_t pbe_concat_p_ae[PPRZ_KEY_LEN*2] = {0};
   memcpy(pbe_concat_p_ae, &sts.myPrivateKeyEphemeral.pub, PPRZ_KEY_LEN);
   memcpy(&pbe_concat_p_ae[PPRZ_KEY_LEN], &sts.theirPublicKeyEphemeral.pub, PPRZ_KEY_LEN);
-  if (!Ed25519_verify(sts.theirPublicKeyEphemeral.pub, pbe_concat_p_ae, PPRZ_SIGN_LEN, sign)) {
+  // returns true if verified properly
+  if (!Ed25519_verify(sts.theirPublicKey.pub, pbe_concat_p_ae, PPRZ_SIGN_LEN, sign)) {
     // log error and return
     // MSG3 sign verify error
     sts.last_error = MSG3_SIGNVERIFY_ERROR;
+    return;
   }
+
+  // update the transport
+  // tx key => my symm key
+  memcpy(trans->tx_key, sts.mySymmetricKey.key, PPRZ_KEY_LEN);
+  // tx nonce (12 bytes, first 4 bytes will be overwritten by the counter)
+  memcpy(trans->tx_nonce, sts.mySymmetricKey.nonce, PPRZ_NONCE_LEN);
+
+  // rx key => their symm key
+  memcpy(trans->rx_key, sts.theirSymmetricKey.key, PPRZ_KEY_LEN);
+  // rx nonce (12 bytes, first 4 bytes will be overwritten by the counter)
+  memcpy(trans->rx_nonce, sts.theirSymmetricKey.nonce, PPRZ_NONCE_LEN);
 
   // if everything went OK, proceed to CRYPTO_OK status
   sts.protocol_stage = CRYPTO_OK;
+  trans->crypto_ok = true;
 }
 
 void spprz_dl_event(void)
