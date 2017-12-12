@@ -31,3 +31,6 @@
 [submodule "sw/ext/hacl-c"]
 	path = sw/ext/hacl-c
 	url = https://github.com/paparazzi/hacl-c.git
+[submodule "sw/ext/ivy-cpp"]
+	path = sw/ext/ivy-cpp
+	url = https://github.com/podhrmic/ivy-cpp.git
