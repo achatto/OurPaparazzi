@@ -78,6 +78,7 @@
     <program name="Link Forwarder" command="sw/ext/rustlink-forwarder/link_forwarder.sh"/>
     <program name="Ivy Logger" command="sw/ext/ivy_logger/ivyLogger.sh"/>
     <program name="Mission Planner" command="sw/ext/ivy-cpp/testIvy"/>
+    <program name="Mission FlightGear" command="sw/ext/flightgear/fg_start_minions.sh"/>
  </section>
 
   <section name="sessions">
