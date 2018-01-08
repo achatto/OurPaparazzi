@@ -30,7 +30,7 @@
    flight_plan="flight_plans/mission_fw.xml"
    settings="settings/fixedwing_basic.xml settings/nps.xml"
    settings_modules="modules/nav_basic_fw.xml modules/gps.xml modules/ahrs_float_dcm.xml modules/imu_common.xml modules/guidance_basic_fw.xml modules/stabilization_attitude_fw.xml"
-   gui_color="blue"
+   gui_color="#8ef3f705ffff"
   />
   <aircraft
    name="Bumblebee_Quad"

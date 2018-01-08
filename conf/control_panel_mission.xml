@@ -77,8 +77,13 @@
     <program name="rtcm2ivy" command="sw/ground_segment/misc/rtcm2ivy"/>
     <program name="Link Forwarder" command="sw/ext/rustlink-forwarder/link_forwarder.sh"/>
     <program name="Ivy Logger" command="sw/ext/ivy_logger/ivyLogger.sh"/>
-    <program name="Mission Planner" command="sw/ext/ivy-cpp/testIvy"/>
-    <program name="Mission FlightGear" command="sw/ext/flightgear/fg_start_minions.sh"/>
+    <program name="Mission Planner" command="sw/ext/ivy-cpp/ivy_mission_planner.sh"/>
+    <program name="FlightGear" command="sw/ext/flightgear/fgfs.sh">
+      <arg flag="--fdm=null"/>
+      <arg flag="--native-fdm=socket,in,30,,5501,udp"/>
+      <arg flag="--prop:/sim/model/path=Models/Aircraft/paparazzi/minion.xml"/>
+      <arg flag="--enable-terrasync"/>
+    </program>
  </section>
 
   <section name="sessions">
@@ -273,6 +278,8 @@
         <arg flag="-b" constant="127.255.255.255:2222"/>
         <arg flag="-t" constant="nps"/>
         <arg flag="--nodisplay"/>
+        <arg flag="-f" constant="127.0.0.1"/>
+        <arg flag="--fg_fdm" constant=""/>
       </program>
 
 
@@ -360,6 +367,8 @@
         <arg flag="-b" constant="127.255.255.255:2222"/>
         <arg flag="-t" constant="nps"/>
         <arg flag="--nodisplay"/>
+        <arg flag="-f" constant="127.0.0.1"/>
+        <arg flag="--fg_fdm" constant=""/>
       </program>
 
       <!-- Mission computer
