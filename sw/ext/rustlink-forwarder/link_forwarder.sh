@@ -1,3 +1,3 @@
 #!/bin/bash
-cd sw/tools/rustlink-forwarder
+cd sw/ext/rustlink-forwarder
 exec cargo run --release -- $*

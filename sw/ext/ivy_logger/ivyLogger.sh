@@ -1,4 +1,4 @@
 #!/bin/bash
-cd sw/tools/ivy_logger
+cd sw/ext/ivy_logger
 make
 exec ./ivyLogger $*

@@ -33,7 +33,7 @@ EXT_DIR=$(PAPARAZZI_SRC)/sw/ext
 include $(PAPARAZZI_SRC)/conf/Makefile.arm-embedded-toolchain
 
 
-all: libopencm3 luftboot chibios fatfs libsbp mavlink TRICAL hacl-c
+all: libopencm3 luftboot chibios fatfs libsbp mavlink TRICAL hacl-c ivy-cpp
 
 # update (and init if needed) all submodules
 update_submodules:
@@ -64,6 +64,11 @@ luftboot: libopencm3.update luftboot.update luftboot.build
 
 luftboot_flash: luftboot.build
 	$(Q)$(MAKE) -C luftboot/src flash BMP_PORT?=/dev/ttyACM0 LIBOPENCM3=../../libopencm3 PREFIX=$(PREFIX)
+
+ivy-cpp: ivy-cpp.update ivy-cpp.build
+
+ivy-cpp.build:
+	$(Q)$(MAKE) -C ivy-cpp
 
 hacl-c: hacl-c.update
 

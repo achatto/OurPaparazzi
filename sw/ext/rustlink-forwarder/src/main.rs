@@ -14,7 +14,7 @@ extern crate pprzlink; // pprzlink
 extern crate clap; // arguments
 
 use pprzlink::parser;
-use pprzlink::parser::{PprzDictionary, PprzMsgClassID, PprzMessage};
+use pprzlink::parser::{PprzDictionary, PprzMsgClassID, PprzMessage, PprzProtocolVersion};
 use pprzlink::transport::PprzTransport;
 
 use ivyrust::*;
@@ -266,13 +266,13 @@ fn main() {
     let xml_file = pprz_root.clone() + "/sw/ext/pprzlink/message_definitions/v1.0/messages.xml";
     let file = File::open(xml_file.clone()).unwrap();
     DICTIONARY.lock().unwrap().push(
-        parser::build_dictionary(file),
+        parser::build_dictionary(file, PprzProtocolVersion::ProtocolV1),
     );
 
     // prepare the dictionary
     let xml_file = pprz_root + "/sw/ext/pprzlink/message_definitions/v1.0/messages.xml";
     let file = File::open(xml_file.clone()).unwrap();
-    let dictionary = Arc::new(Mutex::new(parser::build_dictionary(file)));
+    let dictionary = Arc::new(Mutex::new(parser::build_dictionary(file, PprzProtocolVersion::ProtocolV1)));
 
     // spin listening thread
     let dict = dictionary.clone();
