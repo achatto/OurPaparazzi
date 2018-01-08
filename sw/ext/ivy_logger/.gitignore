@@ -1,0 +1,4 @@
+ivyLogger
+*.o
+*.so
+*.a
