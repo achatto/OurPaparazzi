@@ -1,0 +1,15 @@
+[package]
+name = "rustlink-forwarder"
+version = "0.1.0"
+authors = ["Michal Podhradsky <mpodhradsky@galois.com>"]
+
+[dependencies]
+pprzlink = { git = "https://github.com/paparazzi/pprzlink-rust" }
+ivyrust = "0.1.1"
+clap = "2.27.1"
+lazy_static = "0.2"
+slog = "2.0.12"
+slog-scope = "4.0.0"
+slog-stdlog = "3.0.2"
+slog-term = "2.3.0"
+chrono = "0.4"
