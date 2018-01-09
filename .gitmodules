@@ -34,3 +34,6 @@
 [submodule "sw/ext/ivy-cpp"]
 	path = sw/ext/ivy-cpp
 	url = https://github.com/podhrmic/ivy-cpp.git
+[submodule "sw/ext/rustlink"]
+	path = sw/ext/rustlink
+	url = https://github.com/paparazzi/rustlink.git
