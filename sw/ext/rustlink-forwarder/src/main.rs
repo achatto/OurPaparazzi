@@ -1,5 +1,3 @@
-#![feature(rustc_private)]
-extern crate log; // logging
 #[macro_use]
 extern crate lazy_static; // global variables
 #[macro_use]
@@ -88,12 +86,11 @@ fn thread_datalink(port: &str, dictionary: Arc<Mutex<PprzDictionary>>) -> Result
 ///
 /// Upon receiving a new message from Ivy bus,
 /// it sends it over on `udp_uplink_port`
-fn thread_telemetry(port: &str, _dictionary: Arc<Mutex<PprzDictionary>>) -> Result<(), Box<Error>> {
+fn thread_telemetry(port: &str, _dictionary: Arc<Mutex<PprzDictionary>>, remote_addr: String) -> Result<(), Box<Error>> {
     let name = "thread_telemetry";
     let addr = String::from("127.0.0.1:33255"); // TODO: fix ports
     let socket = UdpSocket::bind(&addr)?;
 
-    let remote_addr = String::from("127.0.0.1");
     let remote_addr = remote_addr + ":" + port;
 
     println!("{} at {}", name, addr);
@@ -226,6 +223,13 @@ fn main() {
                 .help("Default is 4243")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("remote_addr")
+                .short("r")
+                .value_name("remote IP addr")
+                .help("Default is localhost")
+                .takes_value(true),
+        )
         .get_matches();
 
     let ivy_bus = String::from(matches.value_of("ivy_bus").unwrap_or(
@@ -238,6 +242,9 @@ fn main() {
 
     let udp_uplink_port = String::from(matches.value_of("udp_uplink_port").unwrap_or("4243"));
     println!("Value for udp_uplink_port: {}", udp_uplink_port);
+
+    let remote_addr = String::from(matches.value_of("remote_addr").unwrap_or("127.0.0.1"));
+    println!("Value for remote_addr: {}", remote_addr);
 
     let pprz_root = match env::var("PAPARAZZI_SRC") {
         Ok(var) => var,
@@ -285,7 +292,7 @@ fn main() {
     // spin sending thread
     let dict = dictionary.clone();
     let t_telemetry =
-        thread::spawn(move || if let Err(e) = thread_telemetry(&udp_uplink_port, dict) {
+        thread::spawn(move || if let Err(e) = thread_telemetry(&udp_uplink_port, dict, remote_addr) {
             println!("Error starting telemetry thread: {}", e);
         } else {
             println!("Datalink telemetry finished");
