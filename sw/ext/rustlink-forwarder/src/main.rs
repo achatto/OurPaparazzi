@@ -65,17 +65,17 @@ fn thread_datalink(port: &str, dictionary: Arc<Mutex<PprzDictionary>>) -> Result
         let (len, _) = socket.recv_from(&mut buf)?;
         for idx in 0..len {
             if rx.parse_byte(buf[idx]) {
-                let dict = dictionary.lock().unwrap();
+                let dict = dictionary.lock().expect("datalink: dictionary lock failed");
                 let msg_name = dict.get_msg_name(PprzMsgClassID::Datalink, rx.buf[1])
-                    .unwrap();
-                let mut msg = dict.find_msg_by_name(&msg_name).unwrap();
+                    .expect("datalink: message name not found");
+                let mut msg = dict.find_msg_by_name(&msg_name).expect("datalink: msg not found");
 
                 // update message fields with real values
                 msg.update(&rx.buf);
 
                 // send the message
-                info!("{}: {}", name, msg.to_string().unwrap());
-                ivyrust::ivy_send_msg(msg.to_string().unwrap());
+                info!("{}: {}", name, msg.to_string().expect("datalink: msg to string failed"));
+                ivyrust::ivy_send_msg(msg.to_string().expect("datalink: sending ivy msg failed"));
             }
         }
     }
@@ -101,12 +101,12 @@ fn thread_telemetry(port: &str, _dictionary: Arc<Mutex<PprzDictionary>>, remote_
             if let Ok(ref mut msg_queue) = lock {
                 while !msg_queue.is_empty() {
                     // get a message from the front of the queue
-                    let new_msg = msg_queue.pop().unwrap();
+                    let new_msg = msg_queue.pop().expect("telemetry: popping a message failed");
 
                     // get a transort
                     let mut tx = PprzTransport::new();
 
-                    info!("{}: {}", name, new_msg.to_string().unwrap());
+                    info!("{}: {}", name, new_msg.to_string().expect("telemetry: Message to string failed"));
 
                     // construct a message from the transport
                     tx.construct_pprz_msg(&new_msg.to_bytes());
@@ -127,7 +127,7 @@ fn thread_telemetry(port: &str, _dictionary: Arc<Mutex<PprzDictionary>>, remote_
 
 /// This global callback is just a cludge for now
 fn global_ivy_callback(mut data: Vec<String>) {
-    let data = &(data.pop().unwrap());
+    let data = &(data.pop().expect("ivy callback: getting data failed"));
     let mut lock = DICTIONARY.try_lock();
     let name = "ivy callback";
 
@@ -136,7 +136,7 @@ fn global_ivy_callback(mut data: Vec<String>) {
             let dictionary = &dictionary_vector[0];
             let msgs = dictionary
                 .get_msgs(PprzMsgClassID::Telemetry)
-                .unwrap()
+                .expect("ivy callback: telemetry msgs not found")
                 .messages;
 
             let values: Vec<&str> = data.split(|c| c == ' ' || c == ',').collect();
@@ -145,9 +145,9 @@ fn global_ivy_callback(mut data: Vec<String>) {
                 for mut msg in msgs {
                     if values[1] == &msg.name {
                         // parse the message and push it into the message queue
-                        msg.set_sender(values[0].parse::<u8>().unwrap());
+                        msg.set_sender(values[0].parse::<u8>().expect("ivy callback: seting sender failed"));
                         msg.update_from_string(&values);
-                        info!("{}: {}", name, msg.to_string().unwrap());
+                        info!("{}: {}", name, msg.to_string().expect("ivy callback: msg to string failed"));
 
                         // if found, update the global msg
                         let mut msg_lock = MSG_QUEUE.lock();
@@ -176,14 +176,13 @@ fn get_log_filename() -> String {
 
 fn main() {
     // open log file
-
     let log_path = String::from("../../../var/logs/") + &get_log_filename();
     let file = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
         .open(log_path)
-        .unwrap();
+        .expect("Log file cannot be created.");
 
     // create logger
     let decorator = slog_term::PlainSyncDecorator::new(file);
@@ -194,7 +193,7 @@ fn main() {
     let _guard = slog_scope::set_global_logger(logger);
 
     // register slog_stdlog as the log handler with the log crate
-    slog_stdlog::init().unwrap();
+    slog_stdlog::init().expect("Logging cannot be initialized");
 
     // Construct command line arguments
     let matches = App::new(
@@ -271,14 +270,14 @@ fn main() {
 
     // ugly ugly hack to get the ivy callback working
     let xml_file = pprz_root.clone() + "/sw/ext/pprzlink/message_definitions/v1.0/messages.xml";
-    let file = File::open(xml_file.clone()).unwrap();
-    DICTIONARY.lock().unwrap().push(
+    let file = File::open(xml_file.clone()).expect("messages.xml not found");
+    DICTIONARY.lock().expect("Dictionary cannot be locked").push(
         parser::build_dictionary(file, PprzProtocolVersion::ProtocolV1),
     );
 
     // prepare the dictionary
     let xml_file = pprz_root + "/sw/ext/pprzlink/message_definitions/v1.0/messages.xml";
-    let file = File::open(xml_file.clone()).unwrap();
+    let file = File::open(xml_file.clone()).expect("messages.xml not found");
     let dictionary = Arc::new(Mutex::new(parser::build_dictionary(file, PprzProtocolVersion::ProtocolV1)));
 
     // spin listening thread
