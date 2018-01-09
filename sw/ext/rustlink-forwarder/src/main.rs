@@ -53,7 +53,7 @@ fn thread_ivy_main(ivy_bus: String) -> Result<(), Box<Error>> {
 /// Listens on `udp_port` on local interface
 fn thread_datalink(port: &str, dictionary: Arc<Mutex<PprzDictionary>>) -> Result<(), Box<Error>> {
     let name = "thread_datalink";
-    let addr = String::from("127.0.0.1");
+    let addr = String::from("0.0.0.0");
     let addr = addr + ":" + port;
     let socket = UdpSocket::bind(&addr)?;
 
@@ -88,7 +88,7 @@ fn thread_datalink(port: &str, dictionary: Arc<Mutex<PprzDictionary>>) -> Result
 /// it sends it over on `udp_uplink_port`
 fn thread_telemetry(port: &str, _dictionary: Arc<Mutex<PprzDictionary>>, remote_addr: String) -> Result<(), Box<Error>> {
     let name = "thread_telemetry";
-    let addr = String::from("127.0.0.1:33255"); // TODO: fix ports
+    let addr = String::from("0.0.0.0:33255"); // TODO: fix ports
     let socket = UdpSocket::bind(&addr)?;
 
     let remote_addr = remote_addr + ":" + port;
