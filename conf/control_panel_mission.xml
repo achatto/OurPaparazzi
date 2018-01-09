@@ -342,6 +342,7 @@
 
       <program name="Mission Planner">
         <arg flag="-b" constant="127.255.255.255:8484"/>
+        <arg flag="-a" constant="2"/>
       </program>
 
       <program name="Link Forwarder">
@@ -397,6 +398,7 @@
 
       <program name="Mission Planner">
         <arg flag="-b" constant="127.255.255.255:8484"/>
+        <arg flag="-a" constant="2"/>
       </program>
 
       <program name="Link Forwarder">
