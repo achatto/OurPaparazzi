@@ -33,7 +33,7 @@ EXT_DIR=$(PAPARAZZI_SRC)/sw/ext
 include $(PAPARAZZI_SRC)/conf/Makefile.arm-embedded-toolchain
 
 
-all: libopencm3 luftboot chibios fatfs libsbp mavlink TRICAL hacl-c ivy-cpp
+all: libopencm3 luftboot chibios fatfs libsbp mavlink TRICAL hacl-c ivy-cpp rustlink
 
 # update (and init if needed) all submodules
 update_submodules:
@@ -71,6 +71,8 @@ ivy-cpp.build:
 	$(Q)$(MAKE) -C ivy-cpp
 
 hacl-c: hacl-c.update
+
+rustlink: rustlink.update
 
 chibios: chibios.update
 
