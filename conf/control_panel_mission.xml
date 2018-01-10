@@ -368,7 +368,8 @@
         <arg flag="--status_period" constant="0"/>
         <arg flag="-v" constant="1.0"/>
         <arg flag="-n" constant="LINK_FORWARDER"/>
-        <arg flag="-r" constant="192.168.41.185"/>
+        <arg flag="-r" constant="192.168.41.255"/>
+        <arg flag="--udp_broadcast"/>
       </program>
     </session>
 
