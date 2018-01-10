@@ -28,7 +28,9 @@
     <define name="USE_MAGNETOMETER" value="FALSE"/>
 
     <module name="radio_control" type="ppm"/>
-    <module name="telemetry" type="transparent"/>
+    <module name="telemetry" type="transparent">
+      <configure name="MODEM_HOST" value="192.168.41.50"/>
+    </module>
     <module name="control"/>
     <module name="imu" type="aspirin_v2.1"/>
     <module name="ahrs" type="float_dcm"/>

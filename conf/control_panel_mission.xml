@@ -84,6 +84,9 @@
       <arg flag="--prop:/sim/model/path=Models/Aircraft/paparazzi/minion.xml"/>
       <arg flag="--enable-terrasync"/>
     </program>
+    <program name="RustLink" command="sw/ext/rustlink/link">
+      <arg flag="-d" constant="/dev/ttyUSB0"/>
+    </program>
  </section>
 
   <section name="sessions">
@@ -265,6 +268,7 @@
       </program>
     </session>
 
+
     <session name="Mission simulation: GCS and Flight Computer">
       <!-- Flight computer
            Ivy bus on separate for for NPS messages
@@ -315,6 +319,7 @@
     </session>
 
 
+
     <session name="Mission simulation: Mission Computer">
       <!-- Mission computer
            Ivy bus on separate for for NPS messages
@@ -355,7 +360,113 @@
 
 
 
+
     <session name="Mission simulation: All in one">
+      <!-- Flight computer
+           Ivy bus on separate for for NPS messages
+           bus: 127.255.255.255:2222
+           port out: 4242
+           port in: 4243
+           - simulator, nodisplay
+      -->
+      <program name="Simulator">
+        <arg flag="-a" constant="@AIRCRAFT"/>
+        <arg flag="-b" constant="127.255.255.255:2222"/>
+        <arg flag="-t" constant="nps"/>
+        <arg flag="--nodisplay"/>
+        <arg flag="-f" constant="127.0.0.1"/>
+        <arg flag="--fg_fdm" constant=""/>
+      </program>
+
+      <!-- Mission computer
+           Ivy bus on separate for for NPS messages
+           bus: 127.255.255.255:8484
+           port out: 4243 (to Flight computer)
+           port in: 4242 (from Flight computer)
+           port out: 4244 (to GCS)
+           port in: 4245 (from GCS)
+           - data  link to flight computer
+           - ivy logger
+           - link forwarder to GCS
+      -->
+      <program name="RustLink">
+        <arg flag="-b" constant="127.255.255.255:8484"/>
+        <arg flag="--udp"/>
+        <arg flag="--udp_port" constant="4242"/>
+        <arg flag="--udp_uplink_port" constant="4243"/>
+        <arg flag="--ping_period" constant="0"/>
+        <arg flag="--status_period" constant="0"/>
+        <arg flag="--sender_id" constant="0"/>
+        <arg flag="-v" constant="1.0"/>
+        <arg flag="-n" constant="MISSION_LINK"/>
+      </program>
+
+      <program name="Ivy Logger">
+        <arg flag="-b" constant="127.255.255.255:8484"/>
+      </program>
+
+      <program name="Mission Planner">
+        <arg flag="-b" constant="127.255.255.255:8484"/>
+        <arg flag="-a" constant="2"/>
+      </program>
+
+
+
+<!--
+      <program name="Link Forwarder">
+        <arg flag="-b" constant="127.255.255.255:8484"/>
+        <arg flag="-d" constant="4245"/>
+        <arg flag="-u" constant="4244"/>
+      </program> -->
+      <program name="RustLink">
+        <arg flag="-b" constant="127.255.255.255:8484"/>
+        <arg flag="--udp"/>
+        <arg flag="--udp_port" constant="4245"/>
+        <arg flag="--udp_uplink_port" constant="4244"/>
+        <arg flag="--rx_msg_class" constant="datalink"/>
+        <arg flag="--sender_id" constant="2"/>
+        <arg flag="--ping_period" constant="0"/>
+        <arg flag="--status_period" constant="0"/>
+        <arg flag="-v" constant="1.0"/>
+        <arg flag="-n" constant="FORWARDER"/>
+      </program>
+
+      <!-- GCS computer
+           Ivy bus on separate for for NPS messages
+           bus: 127.255.255.255:2010
+           port out: 4244 (to Mission computer)
+           port in: 4245 (from Mission computer)           
+           - data  link to mission computer
+           - GCS
+           - server
+           - messages
+      -->
+      <program name="RustLink">
+        <arg flag="-b" constant="127.255.255.255:2010"/>
+        <arg flag="--udp"/>
+        <arg flag="--udp_port" constant="4244"/>
+        <arg flag="--udp_uplink_port" constant="4245"/>
+        <arg flag="--ping_period" constant="1000"/>
+        <arg flag="--status_period" constant="1000"/>
+        <arg flag="-v" constant="1.0"/>
+        <arg flag="-n" constant="DATALINK"/>
+      </program>
+      <program name="Server">
+        <arg flag="-b" constant="127.255.255.255:2010"/>
+      </program>
+      <program name="GCS">
+        <arg flag="-b" constant="127.255.255.255:2010"/>
+      </program>
+      <program name="Messages">
+        <arg flag="-c" constant="datalink"/>
+        <arg flag="-c" constant="ground"/>
+        <arg flag="-b" constant="127.255.255.255:2010"/>
+      </program>
+    </session>
+
+
+
+<session name="Mission simulation: All in one (Link)">
       <!-- Flight computer
            Ivy bus on separate for for NPS messages
            bus: 127.255.255.255:2222
@@ -438,6 +549,7 @@
         <arg flag="-b" constant="127.255.255.255:2010"/>
       </program>
     </session>
+
 
   </section>
 
