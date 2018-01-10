@@ -271,6 +271,7 @@
 
     <session name="Mission simulation: GCS and Flight Computer">
       <!-- Flight computer
+            has to be compiled with the proper MODEM_HOST value
            Ivy bus on separate for for NPS messages
            bus: 127.255.255.255:2222
            port out: 4242
@@ -289,6 +290,7 @@
 
       <!-- GCS computer
            Ivy bus on separate for for NPS messages
+           has to have the broadcast IP properly set
            bus: 127.255.255.255:2010
            port out: 4244 (to Mission computer)
            port in: 4245 (from Mission computer)           
@@ -304,6 +306,8 @@
         <arg flag="-udp_uplink_port" constant="4245"/>
         <arg flag="-ping_period" constant="1000"/>
         <arg flag="-status_period" constant="1000"/>
+        <arg flag="-udp_broadcast"/>
+        <arg flag="-udp_broadcast_addr" constant="192.168.41.255"/>
       </program>
       <program name="Server">
         <arg flag="-b" constant="127.255.255.255:2010"/>
@@ -322,6 +326,7 @@
 
     <session name="Mission simulation: Mission Computer">
       <!-- Mission computer
+            data link also uses broadcast IP to reach GCS computer
            Ivy bus on separate for for NPS messages
            bus: 127.255.255.255:8484
            port out: 4243 (to Flight computer)
@@ -337,8 +342,8 @@
         <arg flag="-udp"/>
         <arg flag="-udp_port" constant="4242"/>
         <arg flag="-udp_uplink_port" constant="4243"/>
-        <arg flag="-ping_period" constant="1000"/>
-        <arg flag="-status_period" constant="1000"/>
+        <arg flag="-udp_broadcast"/>
+        <arg flag="-udp_broadcast_addr" constant="192.168.41.255"/>
       </program>
 
       <program name="Ivy Logger">
@@ -348,18 +353,24 @@
       <program name="Mission Planner">
         <arg flag="-b" constant="127.255.255.255:8484"/>
         <arg flag="-a" constant="2"/>
+        <!-- for evil mode: arg flag="-e" / -->
       </program>
 
-      <program name="Link Forwarder">
+      <!-- Rethink the incoming ports for the evil mode-->
+      <program name="RustLink">
         <arg flag="-b" constant="127.255.255.255:8484"/>
-        <arg flag="-d" constant="4245"/>
-        <!-- 22 for evil mode -->
-        <arg flag="-u" constant="4244"/>
+        <arg flag="--udp"/>
+        <arg flag="--udp_port" constant="4245"/>
+        <arg flag="--udp_uplink_port" constant="4244"/>
+        <arg flag="--rx_msg_class" constant="datalink"/>
+        <arg flag="--sender_id" constant="2"/>
+        <arg flag="--ping_period" constant="0"/>
+        <arg flag="--status_period" constant="0"/>
+        <arg flag="-v" constant="1.0"/>
+        <arg flag="-n" constant="LINK_FORWARDER"/>
+        <arg flag="-r" constant="192.168.41.185"/>
       </program>
     </session>
-
-
-
 
     <session name="Mission simulation: All in one">
       <!-- Flight computer
@@ -410,14 +421,6 @@
         <arg flag="-a" constant="2"/>
       </program>
 
-
-
-<!--
-      <program name="Link Forwarder">
-        <arg flag="-b" constant="127.255.255.255:8484"/>
-        <arg flag="-d" constant="4245"/>
-        <arg flag="-u" constant="4244"/>
-      </program> -->
       <program name="RustLink">
         <arg flag="-b" constant="127.255.255.255:8484"/>
         <arg flag="--udp"/>
@@ -428,7 +431,7 @@
         <arg flag="--ping_period" constant="0"/>
         <arg flag="--status_period" constant="0"/>
         <arg flag="-v" constant="1.0"/>
-        <arg flag="-n" constant="FORWARDER"/>
+        <arg flag="-n" constant="LINK_FORWARDER"/>
       </program>
 
       <!-- GCS computer
@@ -466,7 +469,7 @@
 
 
 
-<session name="Mission simulation: All in one (Link)">
+<session name="Mission simulation: All in one (Localhost only)">
       <!-- Flight computer
            Ivy bus on separate for for NPS messages
            bus: 127.255.255.255:2222
