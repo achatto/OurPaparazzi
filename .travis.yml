@@ -13,6 +13,13 @@ install:
 script:
   - arm-none-eabi-gcc --version
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then make test_all_confs; else make test; fi; fi
+  - build-wrapper-linux-x86-64 --out-dir bw-output make clean all
+  - sonar-scanner
+
+cache:
+  directories:
+    - '$HOME/.sonar/cache'
+
 
 env:
   global:
@@ -29,6 +36,10 @@ addons:
     build_command_prepend: make ext; cov-configure --comptype gcc --compiler arm-none-eabi-gcc --template
     build_command: make test_coverity
     branch_pattern: coverity_scan
+  sonarcloud:
+    organization: "paparazzi-uav"
+    token:
+      secure: "908e51bdce16f17f9c21d3a23a140d614edf761d"
 
 notifications:
   webhooks:
