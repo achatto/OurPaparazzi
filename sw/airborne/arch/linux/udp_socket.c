@@ -76,6 +76,11 @@ int udp_socket_create(struct UdpSocket *sock, char *host, int port_out, int port
 
   // Create the socket with the correct protocl
   sock->sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+  if (sock->sockfd < 0)
+  {
+    return -1;
+  }
+
   int one = 1;
   // Enable reusing of address
   if(setsockopt(sock->sockfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)))
@@ -218,9 +223,9 @@ int udp_socket_set_recvbuf(struct UdpSocket *sock, int buf_size)
 {
   // Set and check
   unsigned int optval_size = 4;
-  int buf_ret;
-  setsockopt(sock->sockfd, SOL_SOCKET, SO_RCVBUF, (char *)&buf_size, optval_size);
-  getsockopt(sock->sockfd, SOL_SOCKET, SO_RCVBUF, (char *)&buf_ret, &optval_size);
+  int buf_ret = -1;
+  (void)setsockopt(sock->sockfd, SOL_SOCKET, SO_RCVBUF, (char *)&buf_size, optval_size);
+  (void)getsockopt(sock->sockfd, SOL_SOCKET, SO_RCVBUF, (char *)&buf_ret, &optval_size);
 
   if (buf_size != buf_ret) {
     return -1;
