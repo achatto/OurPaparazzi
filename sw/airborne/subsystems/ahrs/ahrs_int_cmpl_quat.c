@@ -217,14 +217,14 @@ void ahrs_icq_propagate(struct Int32Rates *gyro, float dt)
 
 void ahrs_icq_set_accel_gains(void)
 {
-  /* Complementary filter proportionnal gain (without frequency correction)
+  /* Complementary filter proportional gain (without frequency correction)
    * Kp = 2 * omega * zeta
    *
    * accel_inv_kp = 1 / (Kp * FRAC_conversion / cross_product_gain)
-   * accel_inv_kp = 4096 * 9.81 / Kp
+   * accel_inv_kp = FRAC_conversion * 9.81 / Kp
    */
-  ahrs_icq.accel_inv_kp = 4096 * 9.81 /
-                          (2 * ahrs_icq.accel_omega * ahrs_icq.accel_zeta);
+  ahrs_icq.accel_inv_kp = (9.81 / (2 * ahrs_icq.accel_omega * ahrs_icq.accel_zeta) >>
+      INT32_RATE_FRAC - (INT32_ACCEL_FRAC + INT32_TRIG_FRAC));
 
   /* Complementary filter integral gain
    * Ki = omega^2
@@ -235,6 +235,10 @@ void ahrs_icq_set_accel_gains(void)
    */
   ahrs_icq.accel_inv_ki = 9.81 / 2048 / (ahrs_icq.accel_omega * ahrs_icq.accel_omega);
 }
+
+// FIXME: check overflows !
+#define COMPUTATION_FRAC 16
+#define ACC_FROM_CROSS_FRAC INT32_RATE_FRAC + INT32_SPEED_FRAC - INT32_ACCEL_FRAC - COMPUTATION_FRAC
 
 void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
 {
@@ -262,10 +266,6 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
      * a_c_body = omega x vel_tangential_body
      * assumption: tangential velocity only along body x-axis (or negative z-axis)
      */
-
-    // FIXME: check overflows !
-#define COMPUTATION_FRAC 16
-#define ACC_FROM_CROSS_FRAC INT32_RATE_FRAC + INT32_SPEED_FRAC - INT32_ACCEL_FRAC - COMPUTATION_FRAC
 
     const struct Int32Vect3 vel_tangential_body =
 #if AHRS_GPS_SPEED_IN_NEGATIVE_Z_DIRECTION
