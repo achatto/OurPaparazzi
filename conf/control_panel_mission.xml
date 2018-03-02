@@ -546,6 +546,7 @@
       </program>
       <program name="GCS">
         <arg flag="-b" constant="127.255.255.255:2010"/>
+        <arg flag="-layout" constant="vertical.xml"/>
       </program>
       <program name="Messages">
         <arg flag="-c" constant="datalink"/>
